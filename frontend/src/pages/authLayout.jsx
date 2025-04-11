@@ -6,7 +6,7 @@ const AuthLayout = ({ children }) => {
       <div className="flex w-[90%] max-w-[1400px] h-[700px] shadow-xl rounded-2xl overflow-hidden bg-white">
         {/* 왼쪽 */}
         <div className="w-1/2 bg-blue-600 text-white flex flex-col justify-center items-center p-10">
-          <h1 className="text-5xl font-bold mb-4">TripleS</h1>
+          <h1 className="text-5xl font-bold mb-4">EekeeK</h1>
           <p className="text-lg text-center">친구들과 함께 이야기를 나눠보세요.</p>
         </div>
 

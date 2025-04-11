@@ -10,22 +10,22 @@ const Register = () => {
       <input
         type="email"
         placeholder="이메일"
-        className="w-full px-4 py-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full box-border px-4 py-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <input
         type="text"
-        placeholder="닉네임"
-        className="w-full px-4 py-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="사용자 이름"
+        className="w-full box-border px-4 py-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <input
         type="password"
         placeholder="비밀번호"
-        className="w-full px-4 py-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full box-border px-4 py-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <input
         type="password"
         placeholder="비밀번호 확인"
-        className="w-full px-4 py-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full box-border px-4 py-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
 
       <label className="flex items-center mb-4 text-sm text-gray-700">
