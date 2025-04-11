@@ -20,7 +20,7 @@ export default function Sidebar() {
         flex flex-col sm:flex-row
         w-20 h-full sm:w-full sm:h-16
         sm:bottom-0 bottom-auto md:left-0
-        items-start justify-around md:justify-start md:space-y-6 md:py-4 ml-4
+        items-start justify-around md:justify-start md:space-y-6 md:py-4 ml-5
       "
     >
       {/* 앱 로고 (PC에서만 보이게) */}
