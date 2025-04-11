@@ -8,6 +8,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const postRoutes = require('./routes/postRoutes');
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB 연결 성공!'))
@@ -16,13 +17,14 @@ mongoose.connect(process.env.MONGO_URI)
 
 app.use(cors()); //cors미들웨어 적용
 app.use(express.json()); //추가해도 좋음, post 요청에서 req.body-나중에 post요청에서 body를 제대로 받는데 도움됨
-app.use('/api/auth', authRoutes); // /api/auth/register, /api/auth/login으로 요청됨
+//app.use('/api/auth', authRoutes); // /api/auth/register, /api/auth/login으로 요청됨
+app.use('/api/posts', postRoutes);
 app.get("/", (req, res) => {
-  res.send("Backend is running! 🚀");
+  res.send("Backend is running! ");
 });
 
 app.post("/api/auth/test", (req, res) => {
-  console.log("✅ 테스트 라우트 도달!");
+  console.log("테스트 라우트 도달!");
   res.send("테스트 성공!");
 });
 
@@ -30,3 +32,4 @@ app.post("/api/auth/test", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
