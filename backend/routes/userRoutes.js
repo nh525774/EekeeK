@@ -3,10 +3,10 @@ const router = express.Router();
 const User = require('../models/User');
 const firebaseAuth = require('../middleware/firebaseAuth');
 
-//내 프로필 조회회
-router.get('me', firebaseAuth, async(req, res) => {
+//내 프로필 조회
+router.get('/me', firebaseAuth, async(req, res) => {
     try {
-        const user = await User.findOne({ firebaseUid: req.firebase });
+        const user = await User.findOne({ firebaseUid: req.firebaseUid });
         if (!user) return res.status(404).json({ message: '프로필 정보가 없습니다. '});
 
         res.json(user);
@@ -25,7 +25,7 @@ router.patch('/me', firebaseAuth, async (req, res) => {
 
     try {
         const updatedUser = await User.findOneAndUpdate(
-            { firebaseIid: req.firebaseUid },
+            { firebaseUid: req.firebaseUid },
             updates,
             { new: true }
         );
@@ -41,27 +41,12 @@ router.patch('/me', firebaseAuth, async (req, res) => {
 //최초 로그인 시 사용자 등록
 router.post('/', firebaseAuth, async (req, res) => {
     const { username, bio, profileImageUrl } = req.body;
-
-    try {
-        //이미 등록된 유저인지 확인
-        const existingUser = await User.findOne({ firebaseUid : req.firebaseUid });
-        if (existingUser) {
-            return res.status(400).json({ message : '이미 등록된 사용자입니다. '});
-        }
-
-        //새 사용자 생성
-        const newUser = new User({
-            firebaseUid: req.firebaseUid,
-            username,
-            bio,
-            profileImageUrl,
-        });
-
-        const savedUser = await newUser.save();
-        res.status(201).json(savedUser);
-    } catch (err) {
-        res.status(500).json({ message: '사용자 등록 실패', error :err.message });
+    if (await User.exists({ firebaseUid: req.firebaseUid })) {
+      return res.status(400).json({ message: '이미 등록된 사용자입니다.' });
     }
-});
+    const newUser = new User({ firebaseUid: req.firebaseUid, username, bio, profileImageUrl });
+    const saved = await newUser.save();
+    res.status(201).json(saved);
+  });
 
 module.exports = router;
