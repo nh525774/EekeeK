@@ -6,39 +6,37 @@ export default function Sidebar() {
 
   const icons = [
     { to: "/MainPage", src: "/icons/home.svg", alt: "home" },
-    { to: "/search", src: "/icons/search.svg", alt: "search" },
-    { to: "/upload", src: "/icons/plus.svg", alt: "upload" },
+    { to: "/SearchPage", src: "/icons/search.svg", alt: "search" },
+    { to: "/UploadPage", src: "/icons/plus.svg", alt: "upload" },
     { to: "/notifications", src: "/icons/bell.svg", alt: "notifications" },
-    { to: "/profile", src: "/icons/user.svg", alt: "profile" },
+    { to: "/ProfilePage", src: "/icons/user.svg", alt: "profile" },
     { to: "/settings", src: "/icons/settings.svg", alt: "settings" },
   ];
 
   return (
     <div
       className="
-        fixed z-10 bg-white border-r sm:border-t
-        flex flex-col sm:flex-row
-        w-20 h-full sm:w-full sm:h-16
-        sm:bottom-0 bottom-auto md:left-0
-        items-start justify-around md:justify-start md:space-y-6 md:py-4 ml-5
+        flex flex-col items-center py-8  py-6 pl-4 h-full
       "
     >
-      {/* 앱 로고 (PC에서만 보이게) */}
-      <Link to="/MainPage" className="hidden md:block">
-        <img src="/icons/logo.webp" alt="logo" className="w-8 h-8" />
+      <Link to="/MainPage" >
+        <img src="/icons/logo.webp" alt="logo" className="w-8 h-8 mb-10" />
       </Link>
 
+    <div className="h-full flex flex-col justify-between gap-6 items-center py-6"> 
       {icons.map((icon) => (
         <Link key={icon.to} to={icon.to}>
           <img
             src={icon.src}
             alt={icon.alt}
-            className={`w-6 h-6 p-2 ${
+            className={`w-6 h-6 p-2 pl-5 ${
               currentPath === icon.to ? "opacity-100" : "opacity-50"
             } hover:opacity-100 transition duration-200`}
           />
         </Link>
       ))}
+    </div>
+    
     </div>
   );
 }
