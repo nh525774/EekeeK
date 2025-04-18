@@ -11,12 +11,13 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      const { token } = await loginWithEmail(email, pw);
+      const { user, token } = await loginWithEmail(email, pw);
 
-      if (!UserActivation.emailVerified) {
+      if (!user.emailVerified) {
         alert("이메일 인증이 완료되지 않았습니다. 메일을 확인해주세요.");
         return;
       }
+      
       console.log("로그인 성공 - Firebase ID 토큰:", token);
 
       // 로컬에 저장 or axios 헤더 설정 가능
