@@ -1,29 +1,42 @@
-  import Sidebar from "../components/Sidebar";
+import Sidebar from "../components/Sidebar";
 
-  export default function MainPage() {
-      return (
-        <div className="flex min-h-screen">
-          {/* 사이드바 */}
+export default function MainPage() {
+  return (
+    <div className="min-h-screen bg-white"> {/* ① 전체 래퍼 */}
+
+      <main className="flex"> {/* ② 메인 콘텐츠 전체 */}
+
+        <aside className="fixed top-0 left-0 w-20 h-screen bg-white border-r z-10"> {/* ③ 사이드바 */}
           <Sidebar />
-          
-          {/* 오른쪽 콘텐츠 영역 */}
-          <div className="ml-40 pt-4 px-4">
-            {/* 헤더 */}
-            <div className="text-4xl font-bold mb-6">EekeeK</div>
-    
-            {/* 피드 */}
-            <div className="space-y-4">
-              <div className="bg-white rounded-xl shadow p-4">
+        </aside>
+
+        < section className="ml-20 w-full"> {/* ④ 메인 영역 (사이드바 제외) */}
+
+          <div className="border-b p-4"> {/* ⑤ 상단 헤더 */}
+            <h1 className="text-2xl font-bold flex justify-center">EekeeK</h1>
+          </div>
+
+          <div className="flex justify-center ml-20"> {/* ⑥ 본문 전체 */}
+            <div className=" max-w-xl w-full p-4 mx-auto ml-20"> {/* ⑦ 피드 카드만 들어가는 중앙 박스 */}
+
+              <div className="bg-white p-4 rounded-lg shadow">
                 <div className="font-semibold">사용자 이름</div>
                 <div className="text-gray-600">이것은 게시물입니다 😎</div>
               </div>
-              <div className="bg-white rounded-xl shadow p-4">
+
+              <div className="bg-white p-4 rounded-lg shadow">
                 <div className="font-semibold">또 다른 사용자</div>
                 <div className="text-gray-600">두 번째 게시물 예시입니다 🎉</div>
               </div>
+
             </div>
           </div>
-        </div>
-      );
-    }
+
+        </section>
+
+      </main>
+    </div>
+  );
+}
+
         
