@@ -1,5 +1,5 @@
 const express = require('express');
-const router = ewpress.Router();
+const router = express.Router();
 const User = require('../models/User');
 const firebaseAuth = require('../middleware/firebaseAuth');
 
@@ -60,7 +60,7 @@ router.post('/', firebaseAuth, async (req, res) => {
         const savedUser = await newUser.save();
         res.status(201).json(savedUser);
     } catch (err) {
-        res.status(500).json({ mewssage: '사용자 등록 실패', error :err.message });
+        res.status(500).json({ message: '사용자 등록 실패', error :err.message });
     }
 });
 
