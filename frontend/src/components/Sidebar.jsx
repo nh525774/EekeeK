@@ -5,7 +5,7 @@ export default function Sidebar() {
   const currentPath = location.pathname;
 
   const icons = [
-    { to: "/", src: "/icons/home.svg", alt: "home" },
+    { to: "/MainPage", src: "/icons/home.svg", alt: "home" },
     { to: "/search", src: "/icons/search.svg", alt: "search" },
     { to: "/upload", src: "/icons/plus.svg", alt: "upload" },
     { to: "/notifications", src: "/icons/bell.svg", alt: "notifications" },
@@ -24,7 +24,7 @@ export default function Sidebar() {
       "
     >
       {/* 앱 로고 (PC에서만 보이게) */}
-      <Link to="/" className="hidden md:block">
+      <Link to="/MainPage" className="hidden md:block">
         <img src="/icons/logo.webp" alt="logo" className="w-8 h-8" />
       </Link>
 
