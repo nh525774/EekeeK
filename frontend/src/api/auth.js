@@ -18,6 +18,9 @@ import {
   export const loginWithEmail = async (email, password) => {
   
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+      await userCredential.user.reload();
+
       const token = await userCredential.user.getIdToken();
       return { user: userCredential.user, token };
     
