@@ -6,18 +6,18 @@ export default function MainPage() {
 
       <main className="flex"> {/* ② 메인 콘텐츠 전체 */}
 
-        <aside className="fixed top-0 left-0 w-20 h-screen bg-white border-r z-10"> {/* ③ 사이드바 */}
+        <aside className="h-screen w-24 border-r bg-blue shrink-0 "> {/* ③ 사이드바 */}
           <Sidebar />
         </aside>
 
-        < section className="ml-20 w-full"> {/* ④ 메인 영역 (사이드바 제외) */}
+        < section className="flex-1"> {/* ④ 메인 영역 (사이드바 제외) */}
 
-          <div className="border-b p-4"> {/* ⑤ 상단 헤더 */}
+          <div className="border-b p-3"> {/* ⑤ 상단 헤더 */}
             <h1 className="text-2xl font-bold flex justify-center">EekeeK</h1>
           </div>
 
-          <div className="flex justify-center ml-20"> {/* ⑥ 본문 전체 */}
-            <div className=" max-w-xl w-full p-4 mx-auto ml-20"> {/* ⑦ 피드 카드만 들어가는 중앙 박스 */}
+          <div className="flex justify-center"> {/* ⑥ 본문 전체 */}
+            <div className=" w-full max-w-xl p-4 space-y-6"> {/* ⑦ 피드 카드만 들어가는 중앙 박스 */}
 
               <div className="bg-white p-4 rounded-lg shadow">
                 <div className="font-semibold">사용자 이름</div>
