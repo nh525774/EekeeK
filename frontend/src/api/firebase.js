@@ -10,3 +10,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+
+
+// 브라우저 콘솔에서 `auth` 객체를 바로 쓰기 위함
+if (typeof window !== "undefined") window.auth = auth;
