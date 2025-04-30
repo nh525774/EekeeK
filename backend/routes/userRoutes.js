@@ -5,6 +5,7 @@ const firebaseAuth = require('../middleware/firebaseAuth');
 
 //내 프로필 조회
 router.get('/me', firebaseAuth, async(req, res) => {
+    console.log(' GET /api/users/me 요청 도착! uid=', req.firebaseUid);
     try {
         const user = await User.findOne({ firebaseUid: req.firebaseUid });
         if (!user) return res.status(404).json({ message: '프로필 정보가 없습니다. '});
