@@ -3,6 +3,7 @@ const router = express.Router();
 const Post = require('../models/Post');
 const firebaseAuth = require('../middleware/firebaseAuth');
 
+
 router.post('/', firebaseAuth, async (req, res) => {
     try {
         const newPost = new Post({
@@ -18,6 +19,8 @@ router.post('/', firebaseAuth, async (req, res) => {
         res.status(500).json({message: '게시글 저장 실패'});
     }
 });
+
+    
 
 // 모든 게시글 조회 (인증 필요 없이 공개)
 router.get('/', async (req, res) => {
