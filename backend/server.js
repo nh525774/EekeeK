@@ -6,6 +6,7 @@ const cors = require('cors')
 const multer = require('multer');
 const Post = require('./models/Post');
 const firebaseAuth = require('./middleware/firebaseAuth');
+const searchRoutes = require('./routes/searchRoutes');
 
 
 dotenv.config();
@@ -25,7 +26,7 @@ app.use(cors()); //cors미들웨어 적용
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
-
+app.use('/api/search', searchRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/users', userRoutes);
 
@@ -47,7 +48,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 //이미지 업로드 + 게시글 생성
-console.log('▶️ POST /upload 라우트 등록됨');
+
 app.post('/upload',firebaseAuth, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
