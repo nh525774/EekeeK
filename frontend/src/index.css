@@ -1,15 +1,41 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
 
 :root {
+  --color-primary: #3385ff;
+  --color-primary-variant: #33cfff;
+  --color-gray-0: #f8f9fb;
+  --color-gray-100: #f8f9fb;
+  --color-gray-200: #cbd1da;
+  --color-gray-300: #b5bbc5;
+  --color-gray-400: #9ca3ad;
+  --color-gray-500: #8b939f;
+  --color-gray-600: #5c616a;
+  --color-gray-700: #303339;
+  --color-gray-800: #16181b;
+  --color-gray-900: #070809;
+  --color-danger: #ce0750;
+
+  --transition: all 300ms ease;
+
+  --radius-1: 0.3rem;
+  --radius-2: 0.6rem;
+  --radius-3: 0.9rem;
+  --radius-4: 1.2rem;
+  --radius-5: 2rem;
+
+  --container-w-lg: 70%;
+  --containter-2-sm: 96%;
+
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color:rgb(250, 249, 249);
+  background-color: rgb(250, 249, 249);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -17,7 +43,9 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   background-color: unset;
 }
@@ -33,8 +61,8 @@ a:hover {
 
 body {
   margin: 0;
-  
-  min-height:100vh;
+
+  min-height: 100vh;
 }
 
 h1 {
@@ -44,7 +72,7 @@ h1 {
 
 button {
   border-radius: 8px;
-  border: 1px solid transparent;
+  border: 1px dash transparent;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
@@ -54,7 +82,7 @@ button {
   transition: border-color 0.25s;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: blue;
 }
 button:focus,
 button:focus-visible {
@@ -64,7 +92,6 @@ button:focus-visible {
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
-    
   }
   a:hover {
     color: #747bff;
@@ -72,4 +99,212 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+* {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  appearance: 0;
+  list-style: none;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+::-webkit-scrollbar {
+  display: none;
+}
+html {
+  font-size: 12px;
+}
+
+body {
+  font-family: "Montserrat", sans-serif;
+  line-height: 1.5;
+  background: var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+.container {
+  width: var(--containter-w-lg);
+  margin-inline: auto;
+}
+img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--color-gray-900);
+}
+.dark {
+  --color-gray-0: #f8f9fb;
+  --color-gray-100: #f8f9fb;
+  --color-gray-200: #cbd1da;
+  --color-gray-300: #b5bbc5;
+  --color-gray-400: #9ca3ad;
+  --color-gray-500: #8b939f;
+  --color-gray-600: #5c616a;
+  --color-gray-700: #303339;
+  --color-gray-800: #16181b;
+  --color-gray-900: #070809;
+}
+.red {
+  --color-primary: #df2d56;
+  --color-primary-variant: rgba(223, 45, 86, 0.2);
+}
+.password__controller span {
+  color: var(--color-gray-900);
+  cursor: pointer;
+}
+.register form input {
+  padding: 1rem;
+  background: var(--color-gray-100);
+  borer-radius: var(--radius-2);
+  color: var(--color-gray-900);
+}
+.register form .password__controller input {
+  background: transparent;
+  width: 100%;
+  color: var(--color-gray-900);
+  padding: 0;
+}
+/*------------------------navbar------------------------*/
+.navbar {
+  background: var(--color-gray-0);
+  display: grid;
+  place-items: center;
+  height: 4rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  border-bottom: 0.2rem solid var(--color-gray-100);
+  z-index: 3;
+}
+
+.navbar__container {
+  display: flex;
+  justify-content: space-between;
+  align=items: center;
+}
+.navber__left {
+  display: flex;
+  align-itmems: center;
+  gap: 1rem;
+}
+
+.navbar__logo {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+.navbar__search {
+  background: var(--color-gray-100);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-2);
+  width: 34rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.navbar__search input {
+  background: transparent;
+  width: 100%;
+  color: var(--color-gray-900);
+}
+.navbar__search button {
+  color: var(--color-gray-0);
+  background: var(--color-primary);
+  width: 2rem;
+  aspect-ratio: 1/2;
+  border-radius: var(--radius-2);
+  display: grid;
+  place-item: center;
+  transition: var(--transition);
+}
+.navbar__search button:hover {
+  background: var(--color-gray-900);
+  color: var(--color-gray-0);
+}
+.navbar_right {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+}
+/*================main--------------*/
+.main {
+  margin: 5rem 0;
+}
+
+.main__container {
+  display: grid;
+  grid-template-columns: 18rem auto 25rem;
+  align-items: start;
+  gap: 1.2rem;
+  margin-top: 12rem;
+  position: relative;
+}
+
+/*-------------------sidebar------------*/
+.sidebar {
+  background: var(--color-gray-0);
+  padding: 1rem;
+  border-radius: var(--radius-3);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  position: sticky;
+  top: 5rem;
+  left: 0;
+}
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0.5rem;
+  border-radius: var(--radius-3);
+  font-weight: 500;
+  transition: var(--transition);
+  cursor: pointer;
+}
+.sidebar__item:hover {
+  padding-left: 1.5rem;
+  background: var(--color-primary-variant);
+}
+.sidebar__item.active {
+  background: var(--color-primary);
+}
+.sidebar__item.active * {
+  background: var(--color-gray-0);
+}
+.sidebar__icon {
+  position: relative;
+  font-size: 1.4rem;
+  margin-top: 0.3rem;
+}
+.sidebar__icon span {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.5rem;
+  background: var(--color-primary);
+  height: 1.2rem;
+  aspect-ratio: 1/1;
+  border-radius: 50%;
+  color: var(--color-gray-0);
+  display: grid;
+  place-itmes: center;
+  font-wieght: 600;
+  font-size: 0.7rem;
+}
+.createPost {
+  background: var(--color-gray-0);
+  border-radius: var(--radius-3);
+  padding: 1.2rem;
+  margin-bottom: 1.2rem;
 }

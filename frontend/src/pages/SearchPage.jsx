@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Sidebar from "../components/Sidebar";
+import Button from "../components/Button";
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
@@ -8,7 +9,9 @@ export default function SearchPage() {
   const handleSearch = async () => {
     if (!query.trim()) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/users/search?q=${query}`);
+      const res = await fetch(
+        `http://localhost:5000/api/users/search?q=${query}`
+      );
       const data = await res.json();
       setResults(data);
     } catch (err) {
@@ -44,12 +47,9 @@ export default function SearchPage() {
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 />
-                <button
-                  onClick={handleSearch}
-                  className="bg-blue-500 text-white px-4 py-2 rounded"
-                >
-                  검색
-                </button>
+                <Button color="primary" onClick={handleSearch}>
+                  Search
+                </Button>
               </div>
 
               {/* 🔽 검색 결과 */}
