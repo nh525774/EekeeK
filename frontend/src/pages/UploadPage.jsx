@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Sidebar from "../components/Sidebar";
 import axios from "axios";
+import Alert from "../components/Alert";
 
 export default function UploadPage() {
   const [imageFile, setImageFile] = useState(null);
@@ -30,14 +31,14 @@ export default function UploadPage() {
       await axios.post("http://localhost:5000/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      alert("업로드 완료!");
+      <Alert>("업로드 완료!")</Alert>;
       // 리셋
       setImageFile(null);
       setPreview(null);
       setCaption("");
     } catch (err) {
       console.error(err);
-      alert("업로드 실패");
+      <Alert>("업로드 실패")</Alert>;
     }
   };
 
@@ -49,25 +50,41 @@ export default function UploadPage() {
       </aside>
 
       {/* Main Upload Section */}
+
       <main className="flex-1 flex flex-col items-center justify-center p-6">
         <h2 className="text-xl font-bold mb-6">새 게시물 만들기</h2>
 
         {!preview ? (
           <div className="flex flex-col items-center border border-gray-300 p-10 rounded-md w-full max-w-md text-center">
-            <img src="/icons/image-icon.png" className="w-16 h-16 mb-4" alt="upload" />
-            <p className="mb-4 text-gray-600">사진과 동영상을 여기에 끌어다 놓으세요</p>
+            <img
+              src="/icons/image-icon.png"
+              className="w-16 h-16 mb-4"
+              alt="upload"
+            />
+            <p className="mb-4 text-gray-600">
+              사진과 동영상을 여기에 끌어다 놓으세요
+            </p>
 
             <label className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded cursor-pointer">
               컴퓨터에서 선택
-              <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
             </label>
           </div>
         ) : (
           <div className="w-full max-w-4xl flex border rounded overflow-hidden shadow">
             {/* 왼쪽: 이미지 미리보기 */}
             <div className="w-1/2 bg-black flex items-center justify-center">
-                <div className="aspect-square w-full max-w-[400px]">
-              <img src={preview} alt="preview" className="w-full h-full object-cover" />
+              <div className="aspect-square w-full max-w-[400px]">
+                <img
+                  src={preview}
+                  alt="preview"
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
 
