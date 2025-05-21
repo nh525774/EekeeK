@@ -7,7 +7,7 @@ const multer = require('multer');
 const Post = require('./models/Post');
 const firebaseAuth = require('./middleware/firebaseAuth');
 const searchRoutes = require('./routes/searchRoutes');
-
+const notificationsRouter = require("./routes/notifications");
 
 dotenv.config();
 
@@ -29,6 +29,7 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api/search', searchRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/users', userRoutes);
+app.use("/api/notifications", notificationsRouter);
 
 app.get("/", (req, res) => {
   res.send("Backend is running! ");
