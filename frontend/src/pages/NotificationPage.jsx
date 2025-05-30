@@ -1,41 +1,43 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { auth } from "../firebase";
+import { auth } from "../api/firebase";
+import NotificationItem from "../components/NotificationItem.jsx";
 
 export default function NotificationPage() {
     const [notifications, setNotifications] = useState([]);
 
     useEffect(() => {
-        const fetchNotifs = async () => {
+        getNotifications();
+    }, []);
+
+    const getNotifications = async () => {
+        try {
             const token = await auth.currentUser.getIdToken();
             const uid = auth.currentUser.uid;
 
             const res = await axios.get(`/api/notifications/${uid}`, {
                 headers: { Authorization: `Bearer ${token}` },
-            });
-
-            if (res.data.success) {
+        });
+        if (res.data.success) {
                 setNotifications(res.data.data);
             }
-        };
-
-        fetchNotifs();
-    }, []);
+        } catch (err) {
+            console.error("알림 불러오기 실패:", err);
+        }
+    };
 
     return (
-        <div className="p-4">
-            <h1 className="text-xl font-bold mb-4"> 알림</h1>
-            <ul className="space-y-2">
-                {notifications.length === 0 ? (
-                    <p>알림이 없습니다.</p>
-                ) : (
-                notifications.map(notif => (
-                    <li key={notif._id} className="border p-2 rounded">
-                            {notif.message}
-                        </li>
-                    ))
-                )}
-            </ul>
+        <div className="p-6 max-w-xl mx-auto">
+            <h1 className="text-2xl font-bold mb-4">🔔 알림</h1>
+            {notifications.length === 0 ? (
+                <p className="text-gray-500 text-center">아직 알림이 없습니다.</p>
+            ) : (
+                <div className="space-y-4">
+                    {notifications.map((item) => (
+                        <NotificationItem key={item._id} item={item} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
