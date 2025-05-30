@@ -12,9 +12,9 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/MainPage" element={<MainPage/>} />
-        <Route path="/SearchPage" element={<SearchPage/>} />
-        <Route path="/UploadPage" element={<UploadPage/>} />
+        <Route path="/MainPage" element={<MainPage />} />
+        <Route path="/SearchPage" element={<SearchPage />} />
+        <Route path="/UploadPage" element={<UploadPage />} />
         <Route path="/notifications" element={<NotificationPage />} />
       </Routes>
     </BrowserRouter>
