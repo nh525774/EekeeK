@@ -1,12 +1,15 @@
 
 export const theme = {
     colors:{
-primary: '#3498db', primaryDark: '#00AC62', dark: '#222', darkLight: '#E1E1E1',
-gray: '#e3e3e3',
+primary: '#2274a5', primaryDark: '#195980', dark: '#222', darkLight: '#E1E1E1', gray: '#e3e3e3',
+
 text: '#494949',
 textLight: '#7C7C7C',
 textDark: '#1D1D1D',
-rose: '#ef4444', roseLight: '#f87171',},
+
+rose: '#ef4444', roseLight: '#f87171',
+
+hotpink:'#db3069', beige:'#e7dfc6', aliceblue:'#e9f1f7', richblack:'#131b23'},
 
 fonts: {
 medium: '500',

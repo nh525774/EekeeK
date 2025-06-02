@@ -1,8 +1,5 @@
-// src/assets/icons/index.js\
-
 import { icons } from "./iconMap";
 
-// ✅ 이 줄 추가!
 const Icon = ({
   name,
   size = 24,

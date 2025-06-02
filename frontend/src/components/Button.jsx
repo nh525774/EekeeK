@@ -1,6 +1,5 @@
-import { theme } from "../constants/theme";
-import { hp } from "../helpers/common"; // 웹 환경에서도 이게 작동한다면 유지, 아니라면 px로 치환
 import Loading from "./loading";
+import { styles } from "../constants/styles";
 
 const Button = ({
   buttonStyle = {},
@@ -9,6 +8,7 @@ const Button = ({
   onPress = () => {},
   loading = false,
   hasShadow = true,
+  children,
 }) => {
   const shadowStyle = hasShadow
     ? {
@@ -39,27 +39,13 @@ const Button = ({
         ...shadowStyle,
       }}
     >
-      <span style={{ ...styles.text, ...textStyle }}>{title}</span>
+      {title ? (
+        <span style={{ ...styles.text, ...textStyle }}>{title}</span>
+      ) : (
+        children
+      )}
     </button>
   );
 };
 
 export default Button;
-
-const styles = {
-  button: {
-    backgroundColor: theme.colors.primary,
-    height: hp ? hp(6.6) : "50px",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: theme.radius?.xl || "12px",
-    border: "none",
-    cursor: "pointer",
-  },
-  text: {
-    fontSize: hp ? hp(2.5) : "16px",
-    color: "white",
-    fontWeight: theme.fonts?.bold || "bold",
-  },
-};
