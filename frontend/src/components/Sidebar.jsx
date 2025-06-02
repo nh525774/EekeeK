@@ -19,24 +19,23 @@ export default function Sidebar() {
         flex flex-col items-center py-8  py-6 pl-4 h-full
       "
     >
-      <Link to="/MainPage" >
+      <Link to="/MainPage">
         <img src="/icons/logo.webp" alt="logo" className="w-8 h-8 mb-10" />
       </Link>
 
-    <div className="h-full flex flex-col justify-between gap-6 items-center py-6"> 
-      {icons.map((icon) => (
-        <Link key={icon.to} to={icon.to}>
-          <img
-            src={icon.src}
-            alt={icon.alt}
-            className={`w-6 h-6 p-2 pl-5 ${
-              currentPath === icon.to ? "opacity-100" : "opacity-50"
-            } hover:opacity-100 transition duration-200`}
-          />
-        </Link>
-      ))}
-    </div>
-    
+      <div className="h-full flex flex-col justify-between gap-6 items-center py-6">
+        {icons.map((icon) => (
+          <Link key={icon.to} to={icon.to}>
+            <img
+              src={icon.src}
+              alt={icon.alt}
+              className={`w-6 h-6 p-2 pl-5 ${
+                currentPath === icon.to ? "opacity-100" : "opacity-50"
+              } hover:opacity-100 transition duration-200`}
+            />
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

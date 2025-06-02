@@ -1,19 +1,31 @@
 import { theme } from "../constants/theme";
 
 const Loading = ({ size = "large", color = theme.colors.primary }) => {
+  const loaderSize = size === "large" ? "50px" : "25px";
+
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size={size} color={color} />
-    </View>
+    <div style={styles.container}>
+      <div
+        style={{
+          width: loaderSize,
+          height: loaderSize,
+          border: `4px solid ${color}`,
+          borderTop: "4px solid transparent",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite",
+        }}
+      ></div>
+    </div>
   );
 };
 
 export default Loading;
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
+    display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    flex: 1,
+    height: "100vh",
   },
-});
+};
