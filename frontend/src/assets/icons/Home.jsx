@@ -1,5 +1,4 @@
 // src/assets/icons/HomeIcon.jsx
-import React from "react";
 
 const Home = ({ width = 24, height = 24, color = "#000", ...props }) => {
   return (
