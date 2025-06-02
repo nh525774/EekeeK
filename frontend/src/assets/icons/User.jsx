@@ -9,7 +9,13 @@ const User = ({ width = 24, height = 24, color = "#000", ...props }) => {
       {...props}
     >
       <path
-        d="M15 6C15 6 9.00001 10.4189 9 12C8.99999 13.5812 15 18 15 18"
+        d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z"
+        stroke={color}
+        strokeWidth={props.strokeWidth}
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 14H10C7.23858 14 5 16.2386 5 19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19C19 16.2386 16.7614 14 14 14Z"
         stroke={color}
         strokeWidth={props.strokeWidth}
         strokeLinecap="round"
