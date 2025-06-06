@@ -3,6 +3,8 @@ import { auth } from "../api/firebase";
 import { uploadFile } from "./imageService";
 
 export const createOrUpdatePost = async (post) => {
+  let uploadResult = null;
+  let isImage = false;
     try {
         //upload image
         if (post.file && typeof post.file == 'object') {
@@ -18,9 +20,12 @@ export const createOrUpdatePost = async (post) => {
     }
 
     const token = await auth.currentUser.getIdToken();
+    const user = auth.currentUser;
     const newPostData = {
-  title: post.title || "기본 제목",             // ✅ 사용자가 작성한 제목 or 기본값
-  content: post.file,                           // ✅ 이건 방금 upload한 이미지 URL
+      userId: user.uid,
+      title: post.title || "기본 제목",   // ✅ 사용자가 작성한 제목 or 기본값
+      imageUrl: isImage ? uploadResult.url : "", //업로드이미지URL
+      videoUrl: !isImage ? uploadResult.url : "",
 };
 
     const res = await axios.post("/api/posts",newPostData, {
