@@ -42,7 +42,7 @@ const Home = () => {
               />
             </span>
             <span
-              onClick={() => navigate("/NewPost")}
+              onClick={() => navigate("/uploadPage")}
               style={{ cursor: "pointer" }}
             >
               <Icon
