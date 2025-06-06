@@ -7,7 +7,7 @@ const multer = require('multer');
 const Post = require('./models/Post');
 const firebaseAuth = require('./middleware/firebaseAuth');
 const searchRoutes = require('./routes/searchRoutes');
-const notificationsRouter = require("./routes/notifications");
+const notificationsRouter = require("./routes/notificationRoutes");
 
 dotenv.config();
 

@@ -13,7 +13,7 @@ router.post('/', firebaseAuth, async (req, res) => {
         });
 
         const saved = await newPost.save();
-        res.status(201).json(saved);
+        res.status(201).json({ success: true, data: saved });
     } catch (err) {
         console.error("게시글 저장 실패:", err);
         res.status(500).json({message: '게시글 저장 실패'});
@@ -26,7 +26,7 @@ router.post('/', firebaseAuth, async (req, res) => {
 router.get('/', async (req, res) => {
     try {
       const posts = await Post.find().sort({ createdAt: -1 });
-      res.json(posts);
+      res.json({ success: true, data: posts });
     } catch (err) {
       res.status(500).json({ message: '게시글 조회 실패' });
     }
@@ -44,7 +44,7 @@ router.delete("/:id", firebaseAuth, async(req, res) => {
         }
 
         await Post.findByIdAndDelete(req.params.id);
-        res.json({ message : "게시글 삭제 완료" });
+        res.json({ success: true, message: "게시글 삭제 완료" });
     } catch (err) {
         res.status(500).json({ message : "삭제 중 오류 발생", error: err.message });
     }
@@ -54,7 +54,7 @@ router.delete("/:id", firebaseAuth, async(req, res) => {
 router.get('/mine', firebaseAuth, async (req, res) => {
     try {
       const myPosts = await Post.find({ userId: req.firebaseUid }).sort({ createdAt: -1 });
-      res.json(myPosts);
+      res.json({ success: true, data: myPosts });
     } catch (err) {
       res.status(500).json({ message: '내 게시글 조회 실패', error: err.message });
     }

@@ -1,5 +1,6 @@
 // src/pages/Login.jsx
-
+import { signInWithEmailAndPassword, getAuth } from "firebase/auth"; 
+import { auth } from "../api/firebase";
 import React, { useRef, useState } from "react";
 import ScreenWrapper from "../components/ScreenWrapper";
 import Header from "../components/Header";
@@ -14,7 +15,8 @@ import { useNavigate } from "react-router-dom";
 const Login = () => {
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const onSubmit = async () => {
     if (!emailRef.current || !passwordRef.current) {
@@ -22,15 +24,28 @@ const Login = () => {
       return;
     }
 
-    // 🟢 good to go
-    console.log(
-      "Submitting login with:",
-      emailRef.current,
-      passwordRef.current
-    );
-    // TODO: 실제 로그인 로직 추가 (e.g. API 호출)
+    setLoading(true);
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        emailRef.current,
+        passwordRef.current
+      );
+
+      const token = await userCredential.user.getIdToken();
+      localStorage.setItem("token", token);
+
+      alert("로그인 성공!");
+      navigate("/MainPage"); // ✅ 로그인 후 이동할 페이지로 경로 바꿔줘
+    } catch (error) {
+      alert("로그인 실패: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+    console.log("✅ 로그인 시도:", emailRef.current, passwordRef.current);
+    console.log("✅ navigate 직전 실행됨");
   };
-  const navigate = useNavigate();
+
   return (
     <ScreenWrapper bg="white">
       <Header title="로그인" showBack={false} /> {/* ✅ BackButton 내장 */}

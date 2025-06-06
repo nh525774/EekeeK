@@ -16,16 +16,27 @@ const NewPost = () => {
 
     const navigate = useNavigate();
     const bodyRef = useRef("");
-    const editorRef = useRef(null);
     const [loading, setLoading] = useState(false);
     const [file, setFile] = useState(null);
-    //const user = auth.currentUser;
+    const [title, setTitle] = useState("");
+
+    const user = auth.currentUser;
+    if (!user) {
+  return (
+    <ScreenWrapper bg="white">
+      <Header title="Create Post" />
+      <div style={{ padding: "32px", textAlign: "center" }}>
+        <p style={{ color: theme.colors.text }}>로그인이 필요합니다.</p>
+      </div>
+    </ScreenWrapper>
+  );
+}
     //임시
-    const user = {
+    /*const user = {
     photoURL: "/default-profile.png",
     displayName: "게스트",
-    uid: "test-user",
-};
+    uid: "test-user", 
+}; */
 
     const onFileChange = (e) => {
     const selected = e.target.files?.[0];
@@ -48,11 +59,10 @@ const NewPost = () => {
       return;
     }
 
-
-    const post = {
-        file,
-        body: bodyRef.current,
-        userId: user?.uid,
+     const post = {
+      title: title || "무제",
+      content: "", // 이미지 URL로 대체됨
+      file,
     };
 
     // create post 
@@ -63,15 +73,14 @@ const NewPost = () => {
     if (res.success) {
         setFile(null);
         bodyRef.current = '';
-        editorRef.current?.setContentHTML('');
         navigate(-1);
     } else {
         alert('Post failed:'+ res.msg);
     }
-    };
+  };
 
 
-    return (
+  return (
         <ScreenWrapper bg="white">
                 <Header title="Create Post" />
                 <div style={{...styles.loginContainer, gap: "28px", paddingTop: "32px"}}>
@@ -83,10 +92,6 @@ const NewPost = () => {
                     <p style={{ fontSize: hp(1.6), color: theme.colors.textLight }}>Public</p>
                 </div>
                 </div>
-                {/* 에디터 */}
-        <div>
-          <RichTextEditor editorRef={editorRef} onChange={(val) => (bodyRef.current = val)} />
-        </div>
         {file && (
           <div style={{ position: "relative" }}>
             {getFileType(file) === "video" ? (
@@ -113,6 +118,13 @@ const NewPost = () => {
             </button>
           </div>
         )}
+        {/* 글쓰기 입력창 */}
+        <RichTextEditor
+          editorRef={bodyRef}
+          onChange={(val) => {
+            bodyRef.current = val;
+          }}
+        />
 
         {/* 업로드 */}
         <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>

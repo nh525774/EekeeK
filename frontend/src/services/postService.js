@@ -1,4 +1,5 @@
 import axios from "axios";
+import { auth } from "../api/firebase";
 import { uploadFile } from "./imageService";
 
 export const createOrUpdatePost = async (post) => {
@@ -16,7 +17,17 @@ export const createOrUpdatePost = async (post) => {
       }
     }
 
-    const res = await axios.post("/api/posts", post); // ← Express API endpoint
+    const token = await auth.currentUser.getIdToken();
+    const newPostData = {
+  title: post.title || "기본 제목",             // ✅ 사용자가 작성한 제목 or 기본값
+  content: post.file,                           // ✅ 이건 방금 upload한 이미지 URL
+};
+
+    const res = await axios.post("/api/posts",newPostData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }); // ← Express API endpoint
     if (res.data.success) {
       return { success: true, data: res.data.data };
     } else {

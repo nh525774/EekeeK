@@ -11,7 +11,8 @@ const Input = (props) => {
         style={{ flex: 1, border: "none", outline: "none", fontSize: "16px" }}
         placeholder={props.placeholder}
         ref={props.inputRef}
-        {...props}
+        onChange={(e) => props.onChange?.(e.target.value)} // ✅ 여기가 핵심
+        type={props.type || "text"}
       />
     </div>
   );
