@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import MainPage from "./pages/MainPage";
+import Home from "./pages/home";
 import SearchPage from "./pages/SearchPage";
 import NewPost from "./pages/newPost";
 import NotificationPage from "./pages/NotificationPage";
@@ -12,7 +12,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/MainPage" element={<MainPage />} />
+        <Route path="/Home" element={<Home />} />
         <Route path="/SearchPage" element={<SearchPage />} />
         <Route path="/UploadPage" element={<NewPost />} />
         <Route path="/notifications" element={<NotificationPage />} />
