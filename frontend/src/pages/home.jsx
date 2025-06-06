@@ -1,0 +1,147 @@
+import React from "react";
+import Button from "../components/Button";
+import ScreenWrapper from "../components/ScreenWrapper";
+import { theme } from "../constants/theme";
+import { hp, wp } from "../helpers/common";
+import Icon from "../assets/icons";
+import { useNavigate } from "react-router-dom";
+import Avatar from "../components/Avatar";
+
+const Home = () => {
+  const { user } = useAuth();
+  //setAuth
+  const navigate = useNavigate();
+
+  const onLogout = async () => {
+    try {
+      // TODO: 실제 로그아웃 로직 (e.g., Firebase, Supabase, etc.)
+      console.log("로그아웃 수행됨");
+      // 예시: await supabase.auth.signOut();
+    } catch (error) {
+      alert("Sign out", "Error signing out!" + error.message);
+    }
+  };
+
+  return (
+    <ScreenWrapper bg="white">
+      <div style={styles.container}>
+        {/* header 부분 */}
+        <div style={styles.header}>
+          <p style={styles.title}>EekeeK</p>
+          <div style={styles.icons}>
+            <span
+              onClick={() => navigate("/notifications")}
+              style={{ cursor: "pointer" }}
+            >
+              <Icon
+                name="Heart"
+                size={hp(3.2)} // hp(3.2) 대신 적당한 px값
+                strokeWidth={2}
+                color={theme.colors.text}
+              />
+            </span>
+            <span
+              onClick={() => navigate("/NewPost")}
+              style={{ cursor: "pointer" }}
+            >
+              <Icon
+                name="Plus"
+                size={hp(3.2)} // hp(3.2) 대신 적당한 px값
+                strokeWidth={2}
+                color={theme.colors.text}
+              />
+            </span>
+            <span
+              onClick={() => navigate("/profile")}
+              style={{ cursor: "pointer" }}
+            >
+              <Avatar
+                src={user?.image}
+                alt="User avatar"
+                style={{
+                  width: "60px", // hp(4.3) 대체값 (적절히 조절 가능)
+                  height: "60px",
+                  borderRadius: theme.radius?.sm || "8px", // rounded
+                  border: "2px solid #ccc", // borderWidth: 2
+                  objectFit: "cover", // 비율 유지
+                }}
+              />
+            </span>
+          </div>
+        </div>
+        <div style={{ marginTop: "auto" }}>
+          <Button title="logout" onClick={onLogout} />
+        </div>
+        {/* 필요 시 다른 콘텐츠 추가 */}
+      </div>
+    </ScreenWrapper>
+  );
+};
+export default Home;
+
+export const styles = {
+  container: {
+    display: "flex",
+    flex: 1,
+
+    flexDirection: "column", // 기본 방향 설정
+    //paddingLeft: wp(4),
+    //paddingRight: wp(4),
+  },
+  header: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    marginLeft: wp(4),
+    marginRight: wp(4),
+  },
+  title: {
+    color: theme.colors?.text || "#000",
+    fontSize: hp(3.2), // hp(3.2) 대체
+    fontWeight: theme.fonts?.bold || "bold",
+  },
+  avatarImage: {
+    height: hp(4.3),
+    width: hp(4.3),
+    borderRadius: theme.radius.sm,
+    borderCurve: "continuous",
+    borderColor: theme.colors.gray,
+    borderWidth: 3,
+  },
+  icons: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 18,
+  },
+  listStyle: {
+    paddingTop: 20,
+    paddingLeft: wp(4),
+    paddingRight: wp(4),
+  },
+  noPosts: {
+    fontSize: hp(2),
+    textAlign: "center",
+    color: theme.colors?.text || "#000",
+  },
+  pill: {
+    position: "absolute",
+    right: -10,
+    top: -4,
+    height: hp(2.2),
+    width: hp(2.2),
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 20,
+    backgroundColor: theme.colors?.roseLight || "#fbb6ce",
+  },
+  pillText: {
+    color: "white",
+    fontSize: hp(1.2),
+    fontWeight: theme.fonts?.bold || "bold",
+  },
+};

@@ -1,27 +1,23 @@
-import React from 'react';
-import { hp } from '../helpers/common';
+import React from "react";
+import { hp } from "../helpers/common";
 import { theme } from "../constants/theme";
+import { getUserImageSrc } from "../services/imageService";
 
-const Avatar = ({
-    uri,
-    size=hp(4.5),
-    rounded=theme.radius.md,
-    style={}
-}) => {
-    return (
-        <img
-      src={uri || "/default-profile.png"}
+const Avatar = ({ uri, size = hp(4.5), style = {} }) => {
+  return (
+    <img
+      src={getUserImageSrc(uri) || "/default-profile.png"}
       alt="avatar"
       style={{
         height: size,
         width: size,
-        borderRadius: rounded,
-        objectFit: "cover",
-        border: `1px solid ${theme.colors.darkLight}`,
+        border: `1px solid ${theme.colors.darkLight || "#ccc"}`, // borderColor + borderWidth 대체
+        borderRadius: "50%", // 둥글게 하고 싶으면 px 조절 (ex: '50%'면 완전 원형)
+        objectFit: "cover", // 이미지가 찌그러지지 않게
         ...style,
       }}
     />
-    );
+  );
 };
 
-export default Avatar
+export default Avatar;
