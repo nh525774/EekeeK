@@ -6,6 +6,7 @@ import { hp, wp } from "../helpers/common";
 import Icon from "../assets/icons";
 import { useNavigate } from "react-router-dom";
 import Avatar from "../components/Avatar";
+import { useAuth } from "../contexts/authContext";
 
 const Home = () => {
   const { user } = useAuth();

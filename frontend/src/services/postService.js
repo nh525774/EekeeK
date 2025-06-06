@@ -52,3 +52,16 @@ export const fetchPosts = async () => {
     return { success: false, msg: "Could not fetch posts" };
   }
 };
+export const fetchPostById = async (postId) => {
+  try {
+    const res = await axios.get(`/api/posts/${postId}`);
+    if (res.data.success) {
+      return res.data.data;
+    } else {
+      throw new Error("Post not found");
+    }
+  } catch (error) {
+    console.error("fetchPostById error: ", error);
+    throw error;
+  }
+};
