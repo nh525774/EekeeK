@@ -3,7 +3,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MainPage from "./pages/MainPage";
 import SearchPage from "./pages/SearchPage";
-import UploadPage from "./pages/UploadPage";
+import NewPost from "./pages/newPost";
 import NotificationPage from "./pages/NotificationPage";
 
 function App() {
@@ -14,7 +14,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/MainPage" element={<MainPage />} />
         <Route path="/SearchPage" element={<SearchPage />} />
-        <Route path="/UploadPage" element={<UploadPage />} />
+        <Route path="/UploadPage" element={<NewPost />} />
         <Route path="/notifications" element={<NotificationPage />} />
       </Routes>
     </BrowserRouter>
