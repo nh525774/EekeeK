@@ -50,4 +50,16 @@ router.post('/', firebaseAuth, async (req, res) => {
     res.status(201).json(saved);
   });
 
+  // firebaseUid로 유저 조회 (AuthContext용)
+router.get('/firebase/:firebaseUid', firebaseAuth, async (req, res) => {
+  try {
+    const user = await User.findOne({ firebaseUid: req.params.firebaseUid });
+    if (!user) {
+      return res.status(404).json({ success: false, message: '사용자 없음' });
+    }
+    res.json({ success: true, data: user });
+  } catch (err) {
+    res.status(500).json({ success: false, message: '유저 조회 실패', error: err.message });
+  }
+});
 module.exports = router;

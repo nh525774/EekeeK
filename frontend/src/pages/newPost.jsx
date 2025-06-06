@@ -83,7 +83,7 @@ const NewPost = () => {
   return (
         <ScreenWrapper bg="white">
                 <Header title="Create Post" />
-                <div style={{...styles.loginContainer, gap: "28px", paddingTop: "32px"}}>
+                <div style={{...styles.loginContainer, gap: "28px", paddingTop: "32px", maxHeight: "calc(100vh - 100px)", overflowY: "auto"}}>
                     {/* 프로필 */}
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <Avatar uri={user?.photoURL} size={hp(6.5)} rounded={theme.radius.xl} />
