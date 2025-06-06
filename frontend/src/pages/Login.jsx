@@ -1,5 +1,5 @@
 // src/pages/Login.jsx
-import { signInWithEmailAndPassword, getAuth } from "firebase/auth"; 
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../api/firebase";
 import React, { useRef, useState } from "react";
 import ScreenWrapper from "../components/ScreenWrapper";
@@ -36,7 +36,7 @@ const Login = () => {
       localStorage.setItem("token", token);
 
       alert("로그인 성공!");
-      navigate("/MainPage"); // ✅ 로그인 후 이동할 페이지로 경로 바꿔줘
+      navigate("/home"); // ✅ 로그인 후 이동할 페이지로 경로 바꿔줘
     } catch (error) {
       alert("로그인 실패: " + error.message);
     } finally {
