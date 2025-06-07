@@ -1,4 +1,6 @@
 import React from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import Button from "../components/Button";
 import ScreenWrapper from "../components/ScreenWrapper";
 import { theme } from "../constants/theme";
@@ -7,11 +9,27 @@ import Icon from "../assets/icons";
 import { useNavigate } from "react-router-dom";
 import Avatar from "../components/Avatar";
 import { useAuth } from "../contexts/authContext";
+import PostCard from "../components/PostCard";
 
 const Home = () => {
   const { user } = useAuth();
   //setAuth
   const navigate = useNavigate();
+  const [posts, setPosts] = useState([]);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const res = await axios.get("/api/posts");
+        if (res.data.success) {
+          setPosts(res.data.data);
+        }
+      } catch (err) {
+        console.error("게시글 로드 실패:", err);
+      }
+    };
+    fetchPosts();
+  }, []);
 
   const onLogout = async () => {
     try {
@@ -69,6 +87,21 @@ const Home = () => {
               />
             </span>
           </div>
+        </div>
+        {/* 게시글 리스트 출력 */}
+        <div style={{ padding: "16px" }}>
+          {posts.length === 0 ? (
+            <p style={styles.noPosts}>아직 게시글이 없습니다.</p>
+          ) : (
+            posts.map((post) =>{
+  const converted = {
+    ...post,
+    file: post.imageUrl || post.videoUrl,
+    body: post.content,
+  };
+  return <PostCard key={post._id} item={converted} currentUser={user} />;
+})
+          )}
         </div>
         <div style={{ marginTop: "auto" }}>
           <Button title="logout" onClick={onLogout} />

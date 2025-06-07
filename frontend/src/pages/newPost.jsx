@@ -60,7 +60,7 @@ const NewPost = () => {
 
     const post = {
       title: title || "무제",
-      content: "", // 이미지 URL로 대체됨
+      content: bodyRef.current || "", // 이미지 URL로 대체됨
       file,
     };
 
