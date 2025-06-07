@@ -8,10 +8,10 @@ export const createOrUpdatePost = async (post) => {
     try {
         //upload image
         if (post.file && typeof post.file == 'object') {
-            const isImage = post.file.type.includes("image");
+            isImage = post.file.type.includes("image");
             const folderName = isImage ? "postImages" : "postVideos";
 
-      const uploadResult = await uploadFile(folderName, post.file); // uri 말고 file 자체 넘김
+      uploadResult = await uploadFile(folderName, post.file); // uri 말고 file 자체 넘김
       if (uploadResult.success) {
         post.file = uploadResult.url; // 백엔드에는 URL만 넘김
       } else {
@@ -24,6 +24,7 @@ export const createOrUpdatePost = async (post) => {
     const newPostData = {
       userId: user.uid,
       title: post.title || "기본 제목",   // ✅ 사용자가 작성한 제목 or 기본값
+      content: post.content || "",
       imageUrl: isImage ? uploadResult.url : "", //업로드이미지URL
       videoUrl: !isImage ? uploadResult.url : "",
 };

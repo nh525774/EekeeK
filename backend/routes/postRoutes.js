@@ -10,6 +10,8 @@ router.post('/', firebaseAuth, async (req, res) => {
             userId: req.firebaseUid,
             title: req.body.title,
             content: req.body.content,
+            imageUrl: req.body.imageUrl,
+            videoUrl: req.body.videoUrl,
         });
 
         const saved = await newPost.save();
