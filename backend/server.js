@@ -17,6 +17,8 @@ const PORT = process.env.PORT || 5000;
 const postRoutes = require('./routes/postRoutes');
 const userRoutes = require('./routes/userRoutes');
 
+const protectRoutes = require('./routes/protectRoutes');
+
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB 연결 성공!'))
   .catch(err => console.error('MongoDB 연결 실패:', err));
@@ -30,6 +32,7 @@ app.use('/api/search', searchRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/users', userRoutes);
 app.use("/api/notifications", notificationsRouter);
+app.use('/api', protectRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend is running! ");
@@ -76,4 +79,3 @@ app.post('/upload',firebaseAuth, upload.single('image'), async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
-
