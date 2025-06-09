@@ -4,12 +4,12 @@ import React from "react";
 import BackButton from "./BackButton";
 import { theme } from "../constants/theme";
 
-const Header = ({ title = "", showBack = false }) => {
+const Header = ({ title = "", showBack = false, rightComponent = null }) => {
   return (
     <header style={styles.header}>
       {showBack ? <BackButton size={24} /> : <div style={styles.spacer} />}
       <h1 style={styles.title}>{title}</h1>
-      <div style={styles.spacer} />
+      {rightComponent || <div style={styles.spacer} />}
     </header>
   );
 };
