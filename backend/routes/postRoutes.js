@@ -18,7 +18,7 @@ router.post('/', firebaseAuth, async (req, res) => {
         res.status(201).json({ success: true, data: saved });
     } catch (err) {
         console.error("게시글 저장 실패:", err);
-        res.status(500).json({message: '게시글 저장 실패'});
+        res.status(500).json({success: false, message: '게시글 저장 실패'});
     }
 });
 
