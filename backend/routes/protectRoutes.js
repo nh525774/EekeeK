@@ -48,8 +48,10 @@ router.post('/protect-mosaic', upload.single('image'), (req, res) => {
       console.error('Mosaic error:', error);
       return res.status(500).json({ error: 'Mosaic failed' });
     }
-    const outputPath = stdout.trim();
-    res.json({ url: `/static/${path.basename(outputPath)}` });
+    const lines = stdout.trim().split('\n');
+    const outputPath = lines.find(line => line.startsWith('/static/'));
+    console.log("✅ Mosaic result URL:", outputPath);
+    res.json({ url: outputPath});
   });
 });
 

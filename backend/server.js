@@ -26,7 +26,9 @@ mongoose.connect(process.env.MONGO_URI)
 
 app.use(cors()); //cors미들웨어 적용
 app.use(express.json());
+
 app.use('/uploads', express.static('uploads'));
+app.use("/static", express.static(__dirname + "/static"));
 
 app.use('/api/search', searchRoutes);
 app.use('/api/posts', postRoutes);
