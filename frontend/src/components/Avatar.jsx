@@ -6,7 +6,7 @@ import { getUserImageSrc } from "../services/imageService";
 const Avatar = ({ uri, size = hp(4.5), style = {} }) => {
   return (
     <img
-      src={getUserImageSrc(uri) || "/default-profile.png"}
+      src={getUserImageSrc(uri) || "/defaultUser.png"}
       alt="avatar"
       style={{
         height: size,

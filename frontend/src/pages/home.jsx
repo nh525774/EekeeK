@@ -31,16 +31,6 @@ const Home = () => {
     fetchPosts();
   }, []);
 
-  const onLogout = async () => {
-    try {
-      // TODO: 실제 로그아웃 로직 (e.g., Firebase, Supabase, etc.)
-      console.log("로그아웃 수행됨");
-      // 예시: await supabase.auth.signOut();
-    } catch (error) {
-      alert("Sign out", "Error signing out!" + error.message);
-    }
-  };
-
   return (
     <ScreenWrapper bg="white">
       <div style={styles.container}>
@@ -93,19 +83,19 @@ const Home = () => {
           {posts.length === 0 ? (
             <p style={styles.noPosts}>아직 게시글이 없습니다.</p>
           ) : (
-            posts.map((post) =>{
-  const converted = {
-    ...post,
-    file: post.imageUrl || post.videoUrl,
-    body: post.content,
-  };
-  return <PostCard key={post._id} item={converted} currentUser={user} />;
-})
+            posts.map((post) => {
+              const converted = {
+                ...post,
+                file: post.imageUrl || post.videoUrl,
+                body: post.content,
+              };
+              return (
+                <PostCard key={post._id} item={converted} currentUser={user} />
+              );
+            })
           )}
         </div>
-        <div style={{ marginTop: "auto" }}>
-          <Button title="logout" onClick={onLogout} />
-        </div>
+
         {/* 필요 시 다른 콘텐츠 추가 */}
       </div>
     </ScreenWrapper>

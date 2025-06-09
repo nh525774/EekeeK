@@ -5,6 +5,8 @@ import Home from "./pages/home";
 import SearchPage from "./pages/SearchPage";
 import NewPost from "./pages/newPost";
 import NotificationPage from "./pages/NotificationPage";
+import Profile from "./pages/profile";
+import EditProfile from "./pages/editProfile";
 
 function App() {
   return (
@@ -16,6 +18,8 @@ function App() {
         <Route path="/SearchPage" element={<SearchPage />} />
         <Route path="/UploadPage" element={<NewPost />} />
         <Route path="/notifications" element={<NotificationPage />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/editprofile" element={<EditProfile />} />
       </Routes>
     </BrowserRouter>
   );
