@@ -41,18 +41,28 @@ router.post('/protect-analyze', upload.single('image'), (req, res) => {
 // /api/protect-mosaic
 router.post('/protect-mosaic', upload.single('image'), (req, res) => {
   const imagePath = req.file.path;
-  const selected = JSON.parse(req.body.selected); // 예: ["phones", "license_plates"]
+  const selected = JSON.parse(req.body.selected);
 
-  const process = execFile('python', ['ai_server/mosaic_entry.py', imagePath, JSON.stringify(selected)], (error, stdout, stderr) => {
+  execFile('python', ['ai_server/mosaic_entry.py', imagePath, JSON.stringify(selected)], (error, stdout, stderr) => {
     if (error) {
       console.error('Mosaic error:', error);
       return res.status(500).json({ error: 'Mosaic failed' });
     }
-    const lines = stdout.trim().split('\n');
-    const outputPath = lines.find(line => line.startsWith('/static/'));
-    console.log("✅ Mosaic result URL:", outputPath);
-    res.json({ url: outputPath});
+
+     try {
+      const lines = stdout.trim().split('\n');
+      const lastLine = lines[lines.length - 1];  // ✅ 이 줄만 JSON으로 간주
+      const result = JSON.parse(lastLine);
+      console.log("✅ Mosaic result:", result);
+      res.json(result); // ✅ { url: ... } 반환
+    } catch (err) {
+      console.error('❌ JSON parse error:', err);
+      console.error('📤 stdout:', stdout);
+      console.error('📛 stderr:', stderr);
+      res.status(500).json({ error: 'Invalid mosaic result' });
+    }
   });
 });
+
 
 module.exports = router;

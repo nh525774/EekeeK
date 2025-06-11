@@ -10,8 +10,6 @@ import { useNavigate } from "react-router-dom";
 import Avatar from "../components/Avatar";
 import { useAuth } from "../contexts/authContext";
 import PostCard from "../components/PostCard";
-import { getUserById } from "../services/userService";
-import { fetchPosts } from "../services/postService";
 import PostList from "../components/postList";
 
 var limit = 0;
@@ -127,7 +125,7 @@ const Home = () => {
         <PostList
           posts={posts}
           currentUser={user}
-          router={router}
+          navigate={navigate}
           isLoading={loading}
           loadMore={getPosts}
           hasMore={hasMore}
