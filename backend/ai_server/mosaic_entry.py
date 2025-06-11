@@ -21,8 +21,10 @@ def to_box(poly):
         int(max(p['x'] for p in poly)),
         int(max(p['y'] for p in poly))
     )
+static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
+os.makedirs(static_dir, exist_ok=True)
 
 boxes = [to_box(p) for p in all_boxes]
-output_path = f"static/mosaic_{os.path.basename(image_path)}"
+output_path = os.path.join(static_dir, f"mosaic_{os.path.basename(image_path)}")
 apply_mosaic(image_path, boxes, output_path)
-print(output_path)
+print("/static/mosaic_" + os.path.basename(image_path))
