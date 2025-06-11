@@ -1,5 +1,6 @@
+/*
 import axios from "axios";
-
+=
 export const getUserById = async (userId) => {
   try {
     const token = localStorage.getItem("firebaseToken"); // Firebase ID token
@@ -12,4 +13,4 @@ export const getUserById = async (userId) => {
     console.error("유저 조회 에러", error);
     return { success: false };
   }
-};
+}; */

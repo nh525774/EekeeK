@@ -86,7 +86,7 @@ const liked = currentUser ? likes.includes(currentUser.uid) : false;
       <div style={styles.header}>
         <div style={styles.userInfo}>
           <img
-            src={item?.user?.image || "/default-profile.png"}
+            src={item?.user?.image || "/defaultUser.png"}
             alt="avatar"
             style={styles.avatar}
           />

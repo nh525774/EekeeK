@@ -1,5 +1,3 @@
-# detect_utils.import contextlib
-
 import contextlib
 import sys
 import os
@@ -13,6 +11,21 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 from ultralytics.cfg import get_cfg
+from facenet_pytorch import MTCNN
+
+# ✅ 로그 제거용 context manager
+@contextlib.contextmanager
+def suppress_output():
+    with open(os.devnull, 'w') as devnull:
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = devnull
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
 
 # ✅ 환경설정
 secret_key = 'RElNcktLcW5rakhXWVphV1NPZmtFS3lEaFBLTk5UUks='
@@ -20,15 +33,16 @@ api_url = 'https://p3o6sbw2ma.apigw.ntruss.com/custom/v1/39564/51ee37fdd65c08539
 naver_client_id = '6ZYK12BlEbyZVUKH_qi9'
 naver_client_secret = 'RQy2zgooVG'
 
+# ✅ YOLO 모델 로드 (로그 suppress 포함)
 def load_model():
     model_path = os.path.join(os.path.dirname(__file__), "license_plate_detector.pt")
-    cfg = get_cfg(overrides={'verbose': False})  # ← 로그 꺼짐
-    with contextlib.redirect_stdout(sys.stderr):  # 로딩 시 찍히는 로그도 차단
+    cfg = get_cfg(overrides={'verbose': False})
+    with contextlib.redirect_stdout(sys.stderr):
         return YOLO(model_path, verbose=False)
 
-lp_model = load_model()
+with suppress_output():
+    lp_model = load_model()
 
-# ✅ OCR 실행 함수
 def run_ocr(image_path):
     with open(image_path, 'rb') as f:
         image_data = f.read()
@@ -43,7 +57,6 @@ def run_ocr(image_path):
     response = requests.post(api_url, headers=headers, data=json.dumps(payload))
     return response.json()
 
-# ✅ 위치 텍스트 검색 여부 판단
 def is_valid_location_query(text):
     text = text.strip()
     return len(text) >= 2 and not text.isdigit() and not re.fullmatch(r'[^\w가-힣]+', text)
@@ -55,7 +68,6 @@ def is_searchable_in_map(text):
     r = requests.get(url, headers=headers, params=params)
     return r.status_code == 200 and len(r.json().get("items", [])) > 0
 
-# ✅ 연락처 및 이메일 감지
 def detect_phones_emails(fields):
     phone_pattern = re.compile(r'\b\d{2,4}(?:[-.\s]?\d{3,4}){1,2}\b')
     email_pattern = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
@@ -77,7 +89,6 @@ def detect_phones_emails(fields):
 
     return phone_boxes, email_boxes
 
-# ✅ 주소 텍스트 감지
 def is_address(text):
     if len(text.strip()) < 3: return False
     if re.search(r'(시|구|동|읍|면|리|가|길|로|거리|역|대교)$', text): return True
@@ -92,7 +103,6 @@ def detect_addresses(fields):
             boxes.append(field['boundingPoly']['vertices'])
     return boxes
 
-# ✅ 위치 노출 위험 정보 감지
 def detect_location_sensitive(fields):
     boxes = []
     for field in fields:
@@ -101,16 +111,22 @@ def detect_location_sensitive(fields):
             boxes.append(field['boundingPoly']['vertices'])
     return boxes
 
-# ✅ 번호판 감지
 def detect_license_plate(image_path):
-    import contextlib
-    import sys
-    with contextlib.redirect_stdout(sys.stderr):
+    with suppress_output():
         results = lp_model(image_path)
     boxes = results[0].boxes.xyxy.cpu().numpy()
     return [list(map(int, box[:4])) for box in boxes]
 
-# ✅ 전체 감지 통합
+def detect_faces(image_path):
+    img = Image.open(image_path).convert("RGB")
+    mtcnn = MTCNN(keep_all=True, device='cpu')
+    boxes, _ = mtcnn.detect(img)
+    face_data = []
+    if boxes is not None:
+        for idx, box in enumerate(boxes):
+            x1, y1, x2, y2 = map(int, box)
+            face_data.append({"id": idx, "box": [x1, y1, x2, y2]})
+    return face_data
 
 def detect_personal_info(image_path):
     ocr_result = run_ocr(image_path)
@@ -120,13 +136,13 @@ def detect_personal_info(image_path):
     addresses = detect_addresses(fields)
     locations = detect_location_sensitive(fields)
     plates = detect_license_plate(image_path)
+    faces = detect_faces(image_path)
 
     return {
         "phones": phones,
         "emails": emails,
         "addresses": addresses,
         "location_sensitive": locations,
-        "license_plates": plates
+        "license_plates": plates,
+        "faces": faces
     }
-
-# 이후 얼굴 인식은 별도 함수에서 처리 예정

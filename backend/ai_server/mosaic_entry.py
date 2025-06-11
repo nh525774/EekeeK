@@ -1,10 +1,13 @@
+# ✅ 통합된 mosaic_entry.py
 import sys, json, os
 from detect_utils import detect_personal_info
 from mosaic_utils import apply_mosaic
 import contextlib
 
 # 🔇 YOLO 로그 제거용
+'''
 @contextlib.contextmanager
+
 def suppress_stdout():
     with open(os.devnull, 'w') as devnull:
         old_stdout = sys.stdout
@@ -13,42 +16,77 @@ def suppress_stdout():
             yield
         finally:
             sys.stdout = old_stdout
+            
+# YOLO 모델도 suppress된 상태에서 로드
+def load_model():
+    from ultralytics import YOLO
+    from ultralytics.cfg import get_cfg
+    model_path = os.path.join(os.path.dirname(__file__), "license_plate_detector.pt")
+    cfg = get_cfg(overrides={"verbose": False})
+    with suppress_stdout():
+        return YOLO(model_path, verbose=False)
 
-image_path = sys.argv[1]
-selected = json.loads(sys.argv[2])  # 예: ["phones", "license_plates"]
+lp_model = load_model()
+'''
 
-# 🔇 suppress 안 하면 YOLO 로그가 stdout에 섞임
-with suppress_stdout():
-    result = detect_personal_info(image_path)
+# ✅ 입력 인자 처리
+image_paths = sys.argv[1:-1]
+selected = json.loads(sys.argv[-1])
 
-all_boxes = []
-for key in selected:
-    all_boxes.extend(result.get(key, []))
+# ✅ static 디렉토리 준비
+static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
+os.makedirs(static_dir, exist_ok=True)
 
 def to_box(poly):
-    # license_plates 같이 숫자 4개짜리 배열이면 그대로 튜플로 변환
     if isinstance(poly[0], (int, float)):
         return tuple(map(int, poly))  # [x1, y1, x2, y2]
-    # 그 외에는 {"x": .., "y": ..} 형태로 처리
     return (
         int(min(p['x'] for p in poly)),
         int(min(p['y'] for p in poly)),
         int(max(p['x'] for p in poly)),
         int(max(p['y'] for p in poly))
     )
-# 파일 이름 중복 방지
-original_filename = os.path.basename(image_path)
-if original_filename.startswith("mosaic_"):
-    output_filename = original_filename
+
+output_map = {}
+
+#with suppress_stdout():
+for image_path in image_paths:
+        result = detect_personal_info(image_path)
+        all_boxes = []
+
+        # ✅ 일반 개인정보 모자이크 (true인 항목만)
+        for key in selected:
+            if key == "faces":
+                continue
+            if selected[key]:
+                all_boxes.extend(result.get(key, []))
+
+        # ✅ 얼굴 ID 기반 모자이크
+        if "faces" in selected:
+            face_infos = result.get("faces", [])
+            selected_val = selected["faces"]
+            if selected_val is True:
+                # faces 전체 다 적용
+                face_boxes = [face["box"] for face in face_infos]
+            else:
+                # 특정 ID만
+                face_boxes = [face["box"] for face in face_infos if face["id"] in selected_val]
+            all_boxes.extend(face_boxes)
+
+        # ✅ 박스 변환 및 저장
+        boxes = [to_box(p) for p in all_boxes]
+        if not boxes:
+            print(json.dumps({ "error": "No mosaic targets found" }))
+            sys.exit(0)
+
+        filename = f"mosaic_{os.path.basename(image_path)}"
+        output_path = os.path.join(static_dir, filename)
+        apply_mosaic(image_path, boxes, output_path)
+        output_map[image_path] = f"/static/{filename}"
+
+# ✅ 결과 출력 수정
+if len(image_paths) == 1:
+    only_value = list(output_map.values())[0]
+    print(json.dumps({ "url": only_value }))  # ✅ JS가 data.url로 받게
 else:
-    output_filename = f"mosaic_{original_filename}"
-
-static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
-os.makedirs(static_dir, exist_ok=True)
-
-boxes = [to_box(p) for p in all_boxes]
-output_path = os.path.join(static_dir, output_filename)
-apply_mosaic(image_path, boxes, output_path)
-
-#  프론트에 보낼 URL
-print("/static/" + output_filename)
+    print(json.dumps(output_map, indent=2, ensure_ascii=False))

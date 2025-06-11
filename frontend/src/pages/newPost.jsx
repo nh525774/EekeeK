@@ -95,31 +95,49 @@ const NewPost = () => {
     }
   };
   const handleMosaicApply = async () => {
+
     if (!file || selectedTypes.length === 0) {
       alert("모자이크할 항목을 선택해주세요.");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("image", file);
-    formData.append("selected", JSON.stringify(selectedTypes));
+  const selectedDict = {};
+  selectedTypes.forEach((type) => {
+    selectedDict[type] = true;
+  });
+
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("selected", JSON.stringify(selectedDict));
 
     const res = await fetch("/api/protect-mosaic", {
       method: "POST",
       body: formData,
     });
 
-    const data = await res.json();
-    const mosaicPath = data.url;
+  const text = await res.text();
+  console.log("🧪 raw response text:", text);
+  const lines = text.trim().split('\n');
+  const lastLine = lines[lines.length - 1];
+  
+  let data;
+try {
+  data = JSON.parse(lastLine);
+} catch (err) {
+  console.error("❌ JSON parse error:", lastLine);
+  alert("서버 응답이 잘못되었습니다.");
+  return;
+}
 
-    // 새 이미지 fetch → File 객체로 변환해서 setFile 교체
-    const baseUrl = "http://localhost:5000";
-    const response = await fetch(baseUrl + mosaicPath);
-    const blob = await response.blob();
-    const mosaicFile = new File([blob], "mosaic_" + file.name, {
-      type: "image/jpeg",
-    });
-    console.log("🧪 blob.type =", blob.type);
+  const mosaicPath = data.url;
+  console.log("✅ mosaicPath:", mosaicPath);
+
+  // 새 이미지 fetch → File 객체로 변환해서 setFile 교체
+  const baseUrl = "http://localhost:5000";
+  const response = await fetch(baseUrl + mosaicPath);
+  const blob = await response.blob();
+  const mosaicFile = new File([blob], "mosaic_" + file.name, { type: "image/jpeg" });
+
 
     setFile(mosaicFile); //  최종 post용 이미지 대체
     setAnalysis(null); //  체크박스 제거
@@ -226,6 +244,7 @@ const NewPost = () => {
           </span>
         </div>
         {/* 모자이크 체크박스 렌더링 */}
+
         {analysis && (
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <p style={{ fontWeight: "bold" }}>모자이크할 항목 선택</p>
@@ -266,6 +285,45 @@ const NewPost = () => {
             </button>
           </div>
         )}
+
+{analysis && (
+  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+    <p style={{ fontWeight: "bold" }}>모자이크할 항목 선택</p>
+    {Object.entries(analysis).map(([key, items]) =>
+      items.length > 0 && (
+        <label key={key}>
+          <input
+            type="checkbox"
+            value={key}
+            checked={selectedTypes.includes(key)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSelectedTypes((prev) =>
+                e.target.checked
+                  ? [...prev, value]
+                  : prev.filter((v) => v !== value)
+              );
+            }}
+          />
+          {key} ({items.length})
+        </label>
+      )
+    )}
+    <div style= {{width: 160, alignSelf: "center", marginTop: 12 }}>
+    <Button
+  title="모자이크 적용"
+  onPress={handleMosaicApply}
+  buttonStyle={{
+    width: 160,
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingLeft: 16,
+    paddingRight: 16,
+  }}
+/>
+</div>
+</div>
+)}
 
         {/* 제출 */}
         <Button title="Post" onPress={onSubmit} loading={loading} />
