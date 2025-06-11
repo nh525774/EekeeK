@@ -12,12 +12,15 @@ export const createOrUpdatePost = async (post) => {
     let videoUrl = "";
 
     if (typeof post.file === "string") {
-      // 🔹 모자이크된 static URL이 들어온 경우
+      // 🔹 모자이크된 static URL이 들어온 경우 > 전체 url로 변환
       isImage = post.file.endsWith(".jpg") || post.file.endsWith(".jpeg") || post.file.endsWith(".png");
-      if (isImage) imageUrl = post.file;
-      else videoUrl = post.file;
+      const baseUrl = "http://localhost:5000";  // 👈 개발환경 기준
+      const fullUrl = post.file.startsWith("http") ? post.file : baseUrl + post.file;
+
+      if (isImage) imageUrl = fullUrl;
+      else videoUrl = fullUrl;
     } else if (post.file && typeof post.file === "object") {
-      // 🔹 로컬 파일 (File 객체)인 경우 → Firebase 업로드
+      // 🔹 File 객체일 경우 (Firebase 업로드)
       isImage = post.file.type.includes("image");
       const folderName = isImage ? "postImages" : "postVideos";
 
