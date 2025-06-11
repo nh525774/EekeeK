@@ -10,12 +10,38 @@ import { useNavigate } from "react-router-dom";
 import Avatar from "../components/Avatar";
 import { useAuth } from "../contexts/authContext";
 import PostCard from "../components/PostCard";
+import { getUserById } from "../services/userService";
+import { fetchPosts } from "../services/postService";
+import PostList from "../components/postList";
+
+var limit = 0;
 
 const Home = () => {
   const { user } = useAuth();
-  //setAuth
   const navigate = useNavigate();
+
   const [posts, setPosts] = useState([]);
+  const [hasMore, setHasMore] = useState(true);
+
+  const handlePostEvent = async (payload) => {
+    if (payload.eventType === "INSERT" && payload?.new?.id) {
+      let newPost = { ...payload.new };
+
+      try {
+        const res = await getUserById(newPost.userId); // Firebase UID로 유저 정보 가져오기
+        newPost.user = res.success
+          ? res.user
+          : {
+              name: "탈퇴한 사용자",
+              profileImage: "/default-profile.png",
+            };
+
+        setPosts((prevPosts) => [newPost, ...prevPosts]); // 최신 게시물을 앞에 추가
+      } catch (err) {
+        console.error("유저 정보 조회 실패:", err);
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -30,6 +56,27 @@ const Home = () => {
     };
     fetchPosts();
   }, []);
+
+  const getPosts = async () => {
+    if (!hasMore) return null; // 더 불러올 게시물이 없다면 종료
+
+    limit += 4;
+    console.log("fetching post:", limit);
+
+    try {
+      const token = localStorage.getItem("firebaseToken");
+      const res = await fetchPosts(limit, token);
+
+      if (res.success) {
+        // 게시물이 더 이상 없으면 hasMore false로
+        if (posts.length === res.data.length) setHasMore(false);
+
+        setPosts(res.data); // 또는 setPosts(prev => [...prev, ...res.data]) 로 바꿔도 OK
+      }
+    } catch (err) {
+      console.error("게시물 가져오기 실패:", err.message);
+    }
+  };
 
   return (
     <ScreenWrapper bg="white">
@@ -78,6 +125,15 @@ const Home = () => {
             </span>
           </div>
         </div>
+
+        <PostList
+          posts={posts}
+          currentUser={user}
+          router={router}
+          isLoading={loading}
+          loadMore={getPosts}
+        />
+
         {/* 게시글 리스트 출력 */}
         <div style={{ padding: "16px" }}>
           {posts.length === 0 ? (
