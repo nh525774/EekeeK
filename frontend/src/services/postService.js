@@ -55,10 +55,14 @@ export const createOrUpdatePost = async (post) => {
   }
 };
 
-export const fetchPosts = async () => {
-    try {
-      const res = await axios.get("/api/posts");
-      if (res.data.success) {
+export const fetchPosts = async (limit = 10) => {
+  try {
+    const token = localStorage.getItem("firebaseToken");
+    const res = await axios.get(`/api/posts?limit=${limit}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.data.success) {
       return { success: true, data: res.data.data };
     } else {
       return { success: false, msg: res.data.msg || "Fetch failed" };
@@ -68,6 +72,7 @@ export const fetchPosts = async () => {
     return { success: false, msg: "Could not fetch posts" };
   }
 };
+
 export const fetchPostById = async (postId) => {
   try {
     const res = await axios.get(`/api/posts/${postId}`);
