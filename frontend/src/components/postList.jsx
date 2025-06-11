@@ -1,51 +1,62 @@
 import React, { useEffect, useRef } from "react";
-import PostCard from "../components/PostCard";
-import Loading from "../components/Loading";
+import PostCard from "./PostCard";
+import Loading from "./loading"; // 로딩 컴포넌트
+import { useNavigate } from "react-router-dom";
 
-const PostList = ({ posts, currentUser, router, isLoading, loadMore }) => {
+const PostList = ({
+  posts,
+  currentUser,
+
+  isLoading,
+  loadMore,
+  hasMore,
+}) => {
   const bottomRef = useRef(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
-          console.log("got to the end"); // ✅ onEndReached
-          loadMore(); // ✅ getPosts() 호출
+        if (entries[0].isIntersecting && hasMore) {
+          console.log("got to the end");
+          loadMore();
         }
       },
-      { threshold: 0 } // ✅ onEndReachedThreshold={0}
+      { threshold: 0 }
     );
 
-    if (bottomRef.current) {
-      observer.observe(bottomRef.current);
-    }
+    if (bottomRef.current) observer.observe(bottomRef.current);
 
     return () => {
       if (bottomRef.current) observer.unobserve(bottomRef.current);
     };
-  }, [bottomRef]);
+  }, [bottomRef, hasMore]);
 
   return (
     <div className="flex flex-col gap-6">
-      {/* 게시물 카드 목록 */}
       {posts.map((item) => (
         <PostCard
           key={item._id || item.id}
           item={item}
           currentUser={currentUser}
-          router={router}
+          navigate={navigate}
         />
       ))}
 
-      {/* Footer → 화면 끝 감지용 */}
+      {/* Footer 상태 렌더링 */}
       <div
         ref={bottomRef}
         style={{
           margin: posts.length === 0 ? "200px 0" : "30px 0",
-          height: 40,
+          textAlign: "center",
         }}
       >
-        {isLoading && <Loading />}
+        {hasMore ? (
+          isLoading && <Loading />
+        ) : (
+          <p style={{ color: "#888", fontSize: "16px" }}>No more posts</p>
+        )}
       </div>
     </div>
   );

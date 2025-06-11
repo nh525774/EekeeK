@@ -22,6 +22,7 @@ const Home = () => {
 
   const [posts, setPosts] = useState([]);
   const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const handlePostEvent = async (payload) => {
     if (payload.eventType === "INSERT" && payload?.new?.id) {
@@ -58,24 +59,21 @@ const Home = () => {
   }, []);
 
   const getPosts = async () => {
-    if (!hasMore) return null; // 더 불러올 게시물이 없다면 종료
+    if (!hasMore) return;
+    setLoading(true);
 
-    limit += 4;
-    console.log("fetching post:", limit);
-
+    limit += 5;
     try {
       const token = localStorage.getItem("firebaseToken");
       const res = await fetchPosts(limit, token);
-
       if (res.success) {
-        // 게시물이 더 이상 없으면 hasMore false로
         if (posts.length === res.data.length) setHasMore(false);
-
-        setPosts(res.data); // 또는 setPosts(prev => [...prev, ...res.data]) 로 바꿔도 OK
+        setPosts(res.data);
       }
     } catch (err) {
       console.error("게시물 가져오기 실패:", err.message);
     }
+    setLoading(false);
   };
 
   return (
@@ -132,6 +130,7 @@ const Home = () => {
           router={router}
           isLoading={loading}
           loadMore={getPosts}
+          hasMore={hasMore}
         />
 
         {/* 게시글 리스트 출력 */}
