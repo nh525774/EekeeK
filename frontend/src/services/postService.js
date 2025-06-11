@@ -3,31 +3,38 @@ import { auth } from "../api/firebase";
 import { uploadFile } from "./imageService";
 
 export const createOrUpdatePost = async (post) => {
-  let uploadResult = null;
-  let isImage = false;
-    try {
-        //upload image
-        if (post.file && typeof post.file == 'object') {
-            isImage = post.file.type.includes("image");
-            const folderName = isImage ? "postImages" : "postVideos";
-
-      uploadResult = await uploadFile(folderName, post.file); // uri 말고 file 자체 넘김
-      if (uploadResult.success) {
-        post.file = uploadResult.url; // 백엔드에는 URL만 넘김
-      } else {
-        return uploadResult;
-      }
-    }
-
+  try {
     const token = await auth.currentUser.getIdToken();
     const user = auth.currentUser;
+
+    let isImage = false;
+    let imageUrl = "";
+    let videoUrl = "";
+
+    if (typeof post.file === "string") {
+      // 🔹 모자이크된 static URL이 들어온 경우
+      isImage = post.file.endsWith(".jpg") || post.file.endsWith(".jpeg") || post.file.endsWith(".png");
+      if (isImage) imageUrl = post.file;
+      else videoUrl = post.file;
+    } else if (post.file && typeof post.file === "object") {
+      // 🔹 로컬 파일 (File 객체)인 경우 → Firebase 업로드
+      isImage = post.file.type.includes("image");
+      const folderName = isImage ? "postImages" : "postVideos";
+
+      const uploadResult = await uploadFile(folderName, post.file);
+      if (!uploadResult.success) return uploadResult;
+
+      if (isImage) imageUrl = uploadResult.url;
+      else videoUrl = uploadResult.url;
+    }
+
     const newPostData = {
       userId: user.uid,
-      title: post.title || "기본 제목",   // ✅ 사용자가 작성한 제목 or 기본값
-      content: post.content || "",
-      imageUrl: isImage ? uploadResult.url : "", //업로드이미지URL
-      videoUrl: !isImage ? uploadResult.url : "",
-};
+      title: post.title || "기본 제목",
+      content: post.content,
+      imageUrl,
+      videoUrl,
+    };
 
     const res = await axios.post("/api/posts",newPostData, {
       headers: {

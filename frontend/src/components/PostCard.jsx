@@ -75,8 +75,6 @@ const styles = {
 };
 
 const PostCard = ({ item, currentUser }) => {
-  const isImage = item?.file?.includes("postImages");
-  const isVideo = item?.file?.includes("postVideos");
 
 const likes = item?.likes || [];
 const liked = currentUser ? likes.includes(currentUser.uid) : false;
@@ -101,28 +99,27 @@ const liked = currentUser ? likes.includes(currentUser.uid) : false;
       </div>
 
       {/* body */}
-      {item?.body && (
-        <div
-          style={styles.postBody}
-          dangerouslySetInnerHTML={{ __html: item.body }}
-        />
-      )}
+      {item.content && (
+  <div style={styles.postBody}>
+    {item.content}
+  </div>
+)}
 
       {/* media */}
-      {item?.file && (
-        <>
-          {isImage && (
-            <img
-              src={item.file}
-              alt="post"
-              style={{ ...styles.media, maxHeight: "400px" }}
-            />
-          )}
-          {isVideo && (
-            <video src={item.file} controls style={styles.media} />
-          )}
-        </>
-      )}
+      {item.imageUrl && (
+  <img
+    src={item.imageUrl}
+    alt="post"
+    style={{ ...styles.media, maxHeight: "400px" }}
+  />
+)}
+{item.videoUrl && (
+  <video
+    src={item.videoUrl}
+    controls
+    style={styles.media}
+  />
+)}
 
       {/* footer */}
       <div style={styles.footer}>

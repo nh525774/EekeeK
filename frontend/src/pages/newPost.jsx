@@ -18,6 +18,9 @@ const NewPost = () => {
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
   const [title] = useState("");
+  const [analysis, setAnalysis] = useState(null);
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [mosaicUrl, setMosaicUrl] = useState(null);
 
   const user = auth.currentUser;
   if (!user) {
@@ -37,14 +40,28 @@ const NewPost = () => {
     uid: "test-user", 
 }; */
 
-  const onFileChange = (e) => {
+  const onFileChange = async (e) => {
     const selected = e.target.files?.[0];
-    if (selected) setFile(selected);
+    if (!selected) return;
+
+    setFile(selected);
+
+    const formData = new FormData();
+    formData.append("image", selected);
+
+    const res = await fetch("/api/protect-analyze", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await res.json();
+  setAnalysis(data);
   };
 
   const getFileType = (file) => {
-    if (!file) return null;
-    return file.type.includes("video") ? "video" : "image";
+    if (!file || typeof file.type !== "string") return null;
+    console.log("📦 file.type:", file.type);
+    return file.type.startsWith("image") ? "image" : "video";
   };
 
   const getFileUrl = (file) => {
@@ -61,7 +78,7 @@ const NewPost = () => {
     const post = {
       title: title || "무제",
       content: bodyRef.current || "", // 이미지 URL로 대체됨
-      file,
+      file: mosaicUrl || file,
     };
 
     // create post
@@ -77,6 +94,36 @@ const NewPost = () => {
       alert("Post failed:" + res.msg);
     }
   };
+  const handleMosaicApply = async () => {
+  if (!file || selectedTypes.length === 0) {
+    alert("모자이크할 항목을 선택해주세요.");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("selected", JSON.stringify(selectedTypes));
+
+  const res = await fetch("/api/protect-mosaic", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await res.json();
+  const mosaicPath = data.url;
+
+  // 새 이미지 fetch → File 객체로 변환해서 setFile 교체
+  const baseUrl = "http://localhost:5000";
+  const response = await fetch(baseUrl + mosaicPath);
+  const blob = await response.blob();
+  const mosaicFile = new File([blob], "mosaic_" + file.name, { type: "image/jpeg" });
+  console.log("🧪 blob.type =", blob.type);
+
+  setFile(mosaicFile);         //  최종 post용 이미지 대체
+  setAnalysis(null);           //  체크박스 제거
+  setSelectedTypes([]);        //  선택 초기화
+  setMosaicUrl(mosaicPath);    //  미리보기용 저장
+};
 
   return (
     <ScreenWrapper bg="white">
@@ -102,15 +149,9 @@ const NewPost = () => {
         </div>
         {file && (
           <div style={{ position: "relative" }}>
-            {getFileType(file) === "video" ? (
-              <video
-                src={getFileUrl(file)}
-                controls
-                style={{ width: "100%", borderRadius: "12px" }}
-              />
-            ) : (
+            {getFileType(file) === "image" ? (
               <img
-                src={getFileUrl(file)}
+                src={mosaicUrl ? `http://localhost:5000${mosaicUrl}` : getFileUrl(file)}
                 alt="preview"
                 style={{
                   display: "block",
@@ -122,9 +163,20 @@ const NewPost = () => {
                   borderRadius: "12px",
                 }}
               />
+            ) : (
+                <video
+                src={getFileUrl(file)}
+                controls
+                style={{ width: "100%", borderRadius: "12px" }}
+              />
             )}
             <button
-              onClick={() => setFile(null)}
+              onClick={() => {
+                setFile(null);
+                setAnalysis(null);
+                setSelectedTypes([]);
+                setMosaicUrl(null);
+              }}
               style={{
                 position: "absolute",
                 top: 10,
@@ -167,6 +219,41 @@ const NewPost = () => {
             Add to your post
           </span>
         </div>
+        {/* 모자이크 체크박스 렌더링 */}
+{analysis && (
+  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+    <p style={{ fontWeight: "bold" }}>모자이크할 항목 선택</p>
+    {Object.entries(analysis).map(([key, items]) =>
+      items.length > 0 && (
+        <label key={key}>
+          <input
+            type="checkbox"
+            value={key}
+            checked={selectedTypes.includes(key)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSelectedTypes((prev) =>
+                e.target.checked
+                  ? [...prev, value]
+                  : prev.filter((v) => v !== value)
+              );
+            }}
+          />
+          {key} ({items.length})
+        </label>
+      )
+    )}
+    <button onClick={handleMosaicApply} style={{
+      marginTop: "8px",
+      padding: "6px 12px",
+      backgroundColor: theme.colors.primary,
+      color: "white",
+      border: "none",
+      borderRadius: "6px",
+      cursor: "pointer"
+    }}>모자이크 적용</button>
+  </div>
+)}
 
         {/* 제출 */}
         <Button title="Post" onPress={onSubmit} loading={loading} />
