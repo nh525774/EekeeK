@@ -1,3 +1,5 @@
+const mime = require('mime');
+mime.define({ 'video/mp4': ['mp4'] }, true);
 const express = require("express");
 const mongoose = require('mongoose');
 const dotenv = require("dotenv");

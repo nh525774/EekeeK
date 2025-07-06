@@ -129,20 +129,28 @@ def detect_faces(image_path):
     return face_data
 
 def detect_personal_info(image_path):
-    ocr_result = run_ocr(image_path)
-    fields = ocr_result['images'][0]['fields']
+    try:
+        # OCR 결과 받아오기 (예외 방지용 get)
+        ocr_result = run_ocr(image_path)
+        fields = ocr_result.get('images', [{}])[0].get('fields', [])
 
-    phones, emails = detect_phones_emails(fields)
-    addresses = detect_addresses(fields)
-    locations = detect_location_sensitive(fields)
-    plates = detect_license_plate(image_path)
-    faces = detect_faces(image_path)
+        # 항목별 탐지 (None 방지)
+        phones, emails = detect_phones_emails(fields)
+        addresses = detect_addresses(fields)
+        locations = detect_location_sensitive(fields)
+        plates = detect_license_plate(image_path) or []
+        faces = detect_faces(image_path) or []
 
-    return {
-        "phones": phones,
-        "emails": emails,
-        "addresses": addresses,
-        "location_sensitive": locations,
-        "license_plates": plates,
-        "faces": faces
-    }
+        # 결과 리턴
+        return {
+            "phones": phones,
+            "emails": emails,
+            "addresses": addresses,
+            "location_sensitive": locations,
+            "license_plates": plates,
+            "faces": faces
+        }
+
+    except Exception as e:
+        print(f"❌ detect_personal_info 실패: {e}", file=sys.stderr)
+        return {}

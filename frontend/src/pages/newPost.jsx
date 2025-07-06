@@ -46,9 +46,39 @@ const NewPost = () => {
 
     setFile(selected);
 
-    const formData = new FormData();
-    formData.append("image", selected);
+    const fileType = selected.type;
+    const isImage = fileType.startsWith("image");
+    const isVideo = fileType.startsWith("video");
 
+    const formData = new FormData();
+    formData.append(isImage ? "image" : "video", selected);
+
+    if (isVideo) {
+      try {
+        const res = await fetch("/api/protect-video-analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+       setAnalysis({
+        faces: Array(data.faces || 0).fill({}),
+        phones: Array(data.phones || 0).fill({}),
+        license_plates: Array(data.license_plates || 0).fill({}),
+        addresses: Array(data.addresses || 0).fill({}),
+        location_sensitive: Array(data.location_sensitive || 0).fill({}),
+      });
+    } catch (err) {
+      console.error("❌ 비디오 분석 실패:", err);
+      alert("비디오 분석에 실패했습니다.");
+    }
+    return;
+  
+  }
+
+ // 이미지 분석
+  try {
     const res = await fetch("/api/protect-analyze", {
       method: "POST",
       body: formData,
@@ -56,7 +86,11 @@ const NewPost = () => {
 
     const data = await res.json();
     setAnalysis(data);
-  };
+  } catch (err) {
+    console.error("❌ 이미지 분석 실패:", err);
+    alert("이미지 분석에 실패했습니다.");
+  }
+};
 
   const getFileType = (file) => {
     if (!file || typeof file.type !== "string") return null;
@@ -106,14 +140,21 @@ const NewPost = () => {
     selectedDict[type] = true;
   });
 
-  const formData = new FormData();
-  formData.append("image", file);
-  formData.append("selected", JSON.stringify(selectedDict));
+ const fileType = getFileType(file); // "image" 또는 "video"
+const endpoint = fileType === "video"
+  ? "/api/protect-video-mosaic"
+  : "/api/protect-mosaic";
 
-    const res = await fetch("/api/protect-mosaic", {
-      method: "POST",
-      body: formData,
-    });
+  console.log("🔥 endpoint:", endpoint);
+
+const formData = new FormData();
+formData.append(fileType, file); // "image" 또는 "video" 키에 파일 첨부
+formData.append("selected", JSON.stringify(selectedDict));
+
+const res = await fetch(endpoint, {
+  method: "POST",
+  body: formData,
+});
 
   const text = await res.text();
   console.log("🧪 raw response text:", text);
@@ -131,12 +172,16 @@ try {
 
   const mosaicPath = data.url;
   console.log("✅ mosaicPath:", mosaicPath);
+  if (!mosaicPath) {
+  alert("모자이크 결과가 없습니다.");
+  return;
+}
 
   // 새 이미지 fetch → File 객체로 변환해서 setFile 교체
   const baseUrl = "http://localhost:5000";
   const response = await fetch(baseUrl + mosaicPath);
   const blob = await response.blob();
-  const mosaicFile = new File([blob], "mosaic_" + file.name, { type: "image/jpeg" });
+  const mosaicFile = new File([blob], "mosaic_" + file.name, { type: blob.type, });
 
 
     setFile(mosaicFile); //  최종 post용 이미지 대체
@@ -245,46 +290,7 @@ try {
         </div>
         {/* 모자이크 체크박스 렌더링 */}
 
-        {analysis && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <p style={{ fontWeight: "bold" }}>모자이크할 항목 선택</p>
-            {Object.entries(analysis).map(
-              ([key, items]) =>
-                items.length > 0 && (
-                  <label key={key}>
-                    <input
-                      type="checkbox"
-                      value={key}
-                      checked={selectedTypes.includes(key)}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setSelectedTypes((prev) =>
-                          e.target.checked
-                            ? [...prev, value]
-                            : prev.filter((v) => v !== value)
-                        );
-                      }}
-                    />
-                    {key} ({items.length})
-                  </label>
-                )
-            )}
-            <button
-              onClick={handleMosaicApply}
-              style={{
-                marginTop: "8px",
-                padding: "6px 12px",
-                backgroundColor: theme.colors.primary,
-                color: "white",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-              }}
-            >
-              모자이크 적용
-            </button>
-          </div>
-        )}
+        
 
 {analysis && (
   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
