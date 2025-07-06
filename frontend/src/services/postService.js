@@ -7,34 +7,49 @@ export const createOrUpdatePost = async (post) => {
     const token = await auth.currentUser.getIdToken();
     const user = auth.currentUser;
 
-    let isImage = false;
     let imageUrl = "";
     let videoUrl = "";
+    const baseUrl = "http://localhost:5000"; 
 
     if (typeof post.file === "string") {
       // 🔹 모자이크된 static URL이 들어온 경우 > 전체 url로 변환
-      isImage = post.file.endsWith(".jpg") || post.file.endsWith(".jpeg") || post.file.endsWith(".png");
-      const baseUrl = "http://localhost:5000";  // 👈 개발환경 기준
+      const isImage = post.file.endsWith(".jpg") || post.file.endsWith(".jpeg") || post.file.endsWith(".png");
       const fullUrl = post.file.startsWith("http") ? post.file : baseUrl + post.file;
 
       if (isImage) imageUrl = fullUrl;
       else videoUrl = fullUrl;
-    } else if (post.file && typeof post.file === "object") {
+    }
+    
+    else if (post.file && typeof post.file === "object") {
       // 🔹 File 객체일 경우 (Firebase 업로드)
-      isImage = post.file.type.includes("image");
-      const folderName = isImage ? "postImages" : "postVideos";
+      const isImage = post.file.type.includes("image");
+      const isVideo = post.file.type.includes("video");
 
-      const uploadResult = await uploadFile(folderName, post.file);
-      if (!uploadResult.success) return uploadResult;
+      const formData = new FormData();
+      formData.append(isImage ? "image" : "video", post.file);
+      formData.append("selected", JSON.stringify(["faces", "phones","license_plates", "addresses", "location_sensitive"]));
 
-      if (isImage) imageUrl = uploadResult.url;
-      else videoUrl = uploadResult.url;
+      const endpoint = isImage ? "/api/protect-mosaic" : "/api/protect-video-mosaic";
+      const response = await axios.post(endpoint, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      if (!response.data?.url) {
+        return { success: false, msg: "모자이크 처리 실패" };
+      }
+
+      const fullUrl = baseUrl + response.data.url;
+
+      if (isImage) imageUrl = fullUrl;
+      else if (isVideo) videoUrl = fullUrl;
     }
 
     const newPostData = {
       userId: user.uid,
       title: post.title || "기본 제목",
-      content: post.content,
+      content: post.content || "",
       imageUrl,
       videoUrl,
     };

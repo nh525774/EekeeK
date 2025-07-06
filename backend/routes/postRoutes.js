@@ -5,6 +5,8 @@ const firebaseAuth = require('../middleware/firebaseAuth');
 
 
 router.post('/', firebaseAuth, async (req, res) => {
+  
+  console.log("📥 요청 body:", req.body);
     try {
         const newPost = new Post({
             userId: req.firebaseUid,

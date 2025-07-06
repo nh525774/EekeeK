@@ -64,5 +64,53 @@ router.post('/protect-mosaic', upload.single('image'), (req, res) => {
   });
 });
 
+// /api/protect-video-analyze
+router.post('/protect-video-analyze', upload.single('video'), (req, res) => {
+  const videoPath = req.file.path;
+
+  execFile('python', ['ai_server/video_analyze.py', videoPath], (error, stdout, stderr) => {
+    if (error) {
+      console.error('Video Analyze error:', error);
+      return res.status(500).json({ error: 'Video analyze failed' });
+    }
+
+    try {
+      const lines = stdout.trim().split('\n');
+      const lastLine = lines[lines.length - 1];  // 마지막 줄만 JSON으로 간주
+      const result = JSON.parse(lastLine);
+      res.json(result);
+    } catch (err) {
+      console.error('❌ JSON parse error:', err);
+      console.error('📤 stdout:', stdout);
+      console.error('📛 stderr:', stderr);
+      res.status(500).json({ error: 'Invalid JSON from Python' });
+    }
+  });
+});
+
+
+// /api/protect-video-mosaic
+router.post('/protect-video-mosaic', upload.single('video'), (req, res) => {
+  const videoPath = req.file.path;
+  const selected = JSON.parse(req.body.selected); // 예: ["faces", "phones"]
+
+  execFile('python', ['ai_server/video_mosaic.py', videoPath, JSON.stringify(selected)], (error, stdout, stderr) => {
+    if (error) {
+      console.error('Video Mosaic error:', error);
+      return res.status(500).json({ error: 'Video mosaic failed' });
+    }
+
+    try {
+      const lines = stdout.trim().split('\n');
+      const lastLine = lines[lines.length - 1];
+      const result = JSON.parse(lastLine); // ✅ { url: ... }
+      res.json(result);
+    } catch (err) {
+      console.error('JSON parse error:', err);
+      console.error('stdout:', stdout);
+      res.status(500).json({ error: 'Invalid JSON from Python' });
+    }
+  });
+});
 
 module.exports = router;
