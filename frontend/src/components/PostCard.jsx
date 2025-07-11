@@ -1,10 +1,8 @@
-
 import { theme } from "../constants/theme";
 import { hp } from "../helpers/common";
 import Heart from "../assets/icons/Heart";
 import Comment from "../assets/icons/Comment";
 import Share from "../assets/icons/Share";
-
 
 const styles = {
   container: {
@@ -75,11 +73,112 @@ const styles = {
 };
 
 const PostCard = ({ item, currentUser }) => {
+  const likes = item?.likes || [];
+  const liked = currentUser ? likes.includes(currentUser.uid) : false;
 
-const likes = item?.likes || [];
-const liked = currentUser ? likes.includes(currentUser.uid) : false;
+  const renderImages = (urls) => {
+    if (!urls || urls.length === 0) return null;
 
+    const count = urls.length;
 
+    if (count === 1) {
+      return (
+        <img
+          src={urls[0]}
+          alt="post"
+          style={{ ...styles.media, maxHeight: "400px" }}
+        />
+      );
+    }
+
+    if (count === 2) {
+      return (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "4px",
+          }}
+        >
+          {urls.map((url, i) => (
+            <img
+              key={i}
+              src={url}
+              alt={`img-${i}`}
+              style={{
+                width: "100%",
+                height: "200px",
+                objectFit: "cover",
+                borderRadius: "12px",
+              }}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    if (count === 3) {
+      return (
+        <div style={{ display: "grid", gap: "4px" }}>
+          <img
+            src={urls[0]}
+            style={{
+              width: "100%",
+              height: "200px",
+              objectFit: "cover",
+              borderRadius: "12px",
+            }}
+          />
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "4px",
+            }}
+          >
+            <img
+              src={urls[1]}
+              style={{
+                width: "100%",
+                height: "200px",
+                objectFit: "cover",
+                borderRadius: "12px",
+              }}
+            />
+            <img
+              src={urls[2]}
+              style={{
+                width: "100%",
+                height: "200px",
+                objectFit: "cover",
+                borderRadius: "12px",
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}
+      >
+        {urls.slice(0, 4).map((url, i) => (
+          <img
+            key={i}
+            src={url}
+            alt={`img-${i}`}
+            style={{
+              width: "100%",
+              height: "200px",
+              objectFit: "cover",
+              borderRadius: "12px",
+            }}
+          />
+        ))}
+      </div>
+    );
+  };
   return (
     <div style={styles.container}>
       {/* header */}
@@ -99,42 +198,43 @@ const liked = currentUser ? likes.includes(currentUser.uid) : false;
       </div>
 
       {/* body */}
-      {item.content && (
-  <div style={styles.postBody}>
-    {item.content}
-  </div>
-)}
+      {item.content && <div style={styles.postBody}>{item.content}</div>}
 
       {/* media */}
-      {item.imageUrl && (
-  <img
-    src={item.imageUrl}
-    alt="post"
-    style={{ ...styles.media, maxHeight: "400px" }}
-  />
-)}
-{item.videoUrl && (
-  <video
-    src={item.videoUrl}
-    controls
-    style={styles.media}
-  />
-)}
+      {item.imageUrls && renderImages(item.imageUrls)}
+      {item.videoUrl && (
+        <video src={item.videoUrl} controls style={styles.media} />
+      )}
 
       {/* footer */}
       <div style={styles.footer}>
         <button style={styles.iconButton}>
-          <Heart width={22} height={22} color={liked ? theme.colors.rose : theme.colors.text} strokeWidth={1.6} />
+          <Heart
+            width={22}
+            height={22}
+            color={liked ? theme.colors.rose : theme.colors.text}
+            strokeWidth={1.6}
+          />
           <span style={styles.count}>{likes.length}</span>
         </button>
 
         <button style={styles.iconButton}>
-          <Comment width={22} height={22} color={theme.colors.textLight} strokeWidth={1.6} />
+          <Comment
+            width={22}
+            height={22}
+            color={theme.colors.textLight}
+            strokeWidth={1.6}
+          />
           <span style={styles.count}>0</span>
         </button>
 
         <button style={styles.iconButton}>
-          <Share width={22} height={22} color={theme.colors.textLight} strokeWidth={1.6} />
+          <Share
+            width={22}
+            height={22}
+            color={theme.colors.textLight}
+            strokeWidth={1.6}
+          />
         </button>
       </div>
     </div>

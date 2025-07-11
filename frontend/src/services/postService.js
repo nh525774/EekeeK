@@ -7,7 +7,7 @@ export const createOrUpdatePost = async (post) => {
     const token = await auth.currentUser.getIdToken();
     const user = auth.currentUser;
 
-    let imageUrl = "";
+    let imageUrls = [];
     let videoUrl = "";
     const baseUrl = "http://localhost:5000"; 
 
@@ -16,41 +16,43 @@ export const createOrUpdatePost = async (post) => {
       const isImage = post.file.endsWith(".jpg") || post.file.endsWith(".jpeg") || post.file.endsWith(".png");
       const fullUrl = post.file.startsWith("http") ? post.file : baseUrl + post.file;
 
-      if (isImage) imageUrl = fullUrl;
+      if (isImage) imageUrls = fullUrl;
       else videoUrl = fullUrl;
     }
     
-    else if (post.file && typeof post.file === "object") {
-      // 🔹 File 객체일 경우 (Firebase 업로드)
-      const isImage = post.file.type.includes("image");
-      const isVideo = post.file.type.includes("video");
+else if (post.files && Array.isArray(post.files)) {
+  for (const file of post.files) {
+    const isImage = file.type.includes("image");
+    const isVideo = file.type.includes("video");
 
-      const formData = new FormData();
-      formData.append(isImage ? "image" : "video", post.file);
-      formData.append("selected", JSON.stringify(["faces", "phones","license_plates", "addresses", "location_sensitive"]));
+    const formData = new FormData();
+    formData.append(isImage ? "image" : "video", file);
+    formData.append("selected", JSON.stringify(["faces", "phones", "license_plates", "addresses", "location_sensitive"]));
 
-      const endpoint = isImage ? "/api/protect-mosaic" : "/api/protect-video-mosaic";
-      const response = await axios.post(endpoint, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      if (!response.data?.url) {
-        return { success: false, msg: "모자이크 처리 실패" };
-      }
+    const endpoint = isImage ? "/api/protect-mosaic" : "/api/protect-video-mosaic";
 
-      const fullUrl = baseUrl + response.data.url;
+    const response = await axios.post(endpoint, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
-      if (isImage) imageUrl = fullUrl;
-      else if (isVideo) videoUrl = fullUrl;
+    if (!response.data?.url) {
+      return { success: false, msg: "모자이크 처리 실패" };
     }
+
+    const fullUrl = baseUrl + response.data.url;
+    if (isImage) imageUrls.push(fullUrl);
+    else if (isVideo) videoUrl = fullUrl; // 하나만 처리한다는 전제
+  }
+}
 
     const newPostData = {
       userId: user.uid,
       title: post.title || "기본 제목",
       content: post.content || "",
-      imageUrl,
+      imageUrls,
       videoUrl,
     };
 
