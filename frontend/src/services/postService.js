@@ -1,6 +1,6 @@
 import axios from "axios";
 import { auth } from "../api/firebase";
-import { uploadFile } from "./imageService";
+//import { uploadFile } from "./imageService";
 
 export const createOrUpdatePost = async (post) => {
   try {
@@ -16,7 +16,7 @@ export const createOrUpdatePost = async (post) => {
       const isImage = post.file.endsWith(".jpg") || post.file.endsWith(".jpeg") || post.file.endsWith(".png");
       const fullUrl = post.file.startsWith("http") ? post.file : baseUrl + post.file;
 
-      if (isImage) imageUrls = fullUrl;
+      if (isImage) imageUrls.push(fullUrl);
       else videoUrl = fullUrl;
     }
     
