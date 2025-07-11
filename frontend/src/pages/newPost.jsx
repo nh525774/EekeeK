@@ -41,13 +41,23 @@ const NewPost = () => {
 }; */
 
   const onFileChange = async (e) => {
-    const selected = Array.from(e.target.files || []).slice(0, 4); // ✅ 최대 4장만
+    const selected = Array.from(e.target.files || []);
+    const remainingSlots = 4 - files.length;
 
-    if (selected.length === 0) return;
+    if (remainingSlots <= 0) {
+      alert("최대 4개의 파일만 업로드할 수 있습니다.");
+      return;
+    }
 
-    setFiles(selected); // ✅ 여러 개 저장
+    const selectedLimited = selected.slice(0, remainingSlots);
+    if (selectedLimited.length === 0) return;
 
-    const first = selected[0]; // 분석은 첫 번째 이미지 기준
+    const newFiles = [...files, ...selectedLimited];
+    setFiles(newFiles);
+
+    const first = selectedLimited[0]; // 분석은 새로 추가한 파일 중 첫 번째
+    if (!first) return;
+
     const fileType = first.type;
     const isImage = fileType.startsWith("image");
     const isVideo = fileType.startsWith("video");
@@ -55,13 +65,17 @@ const NewPost = () => {
     const formData = new FormData();
     formData.append(isImage ? "image" : "video", first);
 
-    if (isVideo) {
-      try {
-        const res = await fetch("/api/protect-video-analyze", {
+    try {
+      const res = await fetch(
+        isVideo ? "/api/protect-video-analyze" : "/api/protect-analyze",
+        {
           method: "POST",
           body: formData,
-        });
-        const data = await res.json();
+        }
+      );
+      const data = await res.json();
+
+      if (isVideo) {
         setAnalysis({
           faces: Array(data.faces || 0).fill({}),
           phones: Array(data.phones || 0).fill({}),
@@ -69,24 +83,12 @@ const NewPost = () => {
           addresses: Array(data.addresses || 0).fill({}),
           location_sensitive: Array(data.location_sensitive || 0).fill({}),
         });
-      } catch (err) {
-        console.error("❌ 비디오 분석 실패:", err);
-        alert("비디오 분석에 실패했습니다.");
+      } else {
+        setAnalysis(data);
       }
-      return;
-    }
-
-    // 이미지 분석
-    try {
-      const res = await fetch("/api/protect-analyze", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      setAnalysis(data);
     } catch (err) {
-      console.error("❌ 이미지 분석 실패:", err);
-      alert("이미지 분석에 실패했습니다.");
+      console.error(`❌ ${isVideo ? "비디오" : "이미지"} 분석 실패:`, err);
+      alert(`${isVideo ? "비디오" : "이미지"} 분석에 실패했습니다.`);
     }
   };
 
