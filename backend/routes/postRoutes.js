@@ -12,7 +12,7 @@ router.post('/', firebaseAuth, async (req, res) => {
             userId: req.firebaseUid,
             title: req.body.title,
             content: req.body.content,
-            imageUrl: req.body.imageUrl,
+            imageUrls: req.body.imageUrls,
             videoUrl: req.body.videoUrl,
         });
 
