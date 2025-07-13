@@ -16,53 +16,102 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 //  /api/protect-analyze
-router.post('/protect-analyze', upload.single('image'), (req, res) => {
-  const imagePath = req.file.path;
+router.post('/protect-analyze', upload.array('image', 4), (req, res) => {
+   const files = req.files;
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: "No images provided" });
+  }
 
-  const process = execFile('python', ['ai_server/detect_entry.py', imagePath], (error, stdout, stderr) => {
+  const results = [];
+  let completed = 0;
+
+  files.forEach(file => {
+    const imagePath = file.path;
+
+  execFile('python', ['ai_server/detect_entry.py', imagePath], (error, stdout, stderr) => {
     if (error) {
       console.error('Detection error:', error);
-      return res.status(500).json({ error: 'Detection failed' });
+      results.push(null);
+    } else {
+      try {
+          const lines = stdout.trim().split('\n');
+          const lastLine = lines[lines.length - 1];
+          const result = JSON.parse(lastLine);
+          results.push(result);
+          } catch (err) {
+            console.error('❌ JSON parse error:', err);
+            results.push(null);
+          }
     }
-    try {
-        const lines = stdout.trim().split('\n');
-        const lastLine = lines[lines.length - 1];  // 마지막 줄만 JSON으로 취급
-        const result = JSON.parse(lastLine);
-      res.json(result);
-    } catch (err) {
-        console.error('❌ JSON parse error:', err);
-     console.error('📤 Python stdout:', stdout);
-        console.error('📛 Python stderr:', stderr);
-      res.status(500).json({ error: 'Invalid JSON from Python' });
-    }
+
+    completed++;
+      if (completed === files.length) {
+        const validResults = results.filter(Boolean);
+        if (validResults.length === 0) {
+          res.status(500).json({ error: "All detections failed" });
+        } else {
+          res.json({ results: validResults });
+        }
+      }
   });
+});
 });
 
 // /api/protect-mosaic
-router.post('/protect-mosaic', upload.single('image'), (req, res) => {
-  const imagePath = req.file.path;
-  const selected = JSON.parse(req.body.selected);
+router.post('/protect-mosaic', upload.array('image', 4), (req, res) => {
+  let selected;
+  try {
+    selected = JSON.parse(req.body.selected);
+  } catch (e) {
+    return res.status(400).json({ error: "Invalid selected JSON" });
+  }
+
+  const files = req.files;
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: "No image files provided" });
+  }
+
+  const results = [];
+  let completed = 0;
+
+  files.forEach(file => {
+    const imagePath = file.path;
 
   execFile('python', ['ai_server/mosaic_entry.py', imagePath, JSON.stringify(selected)], (error, stdout, stderr) => {
     if (error) {
       console.error('Mosaic error:', error);
-      return res.status(500).json({ error: 'Mosaic failed' });
-    }
+      results.push(null);
+    } else {
+      try {
+          const lines = stdout.trim().split('\n');
+          const lastLine = lines[lines.length - 1];
+          const result = JSON.parse(lastLine);
 
-     try {
-      const lines = stdout.trim().split('\n');
-      const lastLine = lines[lines.length - 1];  // ✅ 이 줄만 JSON으로 간주
-      const result = JSON.parse(lastLine);
-      console.log("✅ Mosaic result:", result);
-      res.json(result); // ✅ { url: ... } 반환
-    } catch (err) {
-      console.error('❌ JSON parse error:', err);
-      console.error('📤 stdout:', stdout);
-      console.error('📛 stderr:', stderr);
-      res.status(500).json({ error: 'Invalid mosaic result' });
+          if (typeof result === 'string') {
+            results.push(result);
+          } else if (result.url) {
+            results.push(result.url);
+          } else {
+            results.push(...Object.values(result));
+          }
+        } catch (err) {
+          console.error('❌ JSON parse error:', err);
+          results.push(null);
+        }
     }
+    completed++;
+      if (completed === files.length) {
+        const validUrls = results.filter(Boolean);
+        if (validUrls.length === 0) {
+          res.status(500).json({ error: "All mosaic processes failed" });
+        } else {
+          res.json({ urls: validUrls });
+        }
+      }
+    });
   });
 });
+
 
 // /api/protect-video-analyze
 router.post('/protect-video-analyze', upload.single('video'), (req, res) => {

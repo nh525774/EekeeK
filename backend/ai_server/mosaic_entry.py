@@ -58,19 +58,12 @@ for image_path in image_paths:
         for key in selected:
             if key == "faces":
                 continue
-            if selected[key]:
-                all_boxes.extend(result.get(key, []))
+            all_boxes.extend(result.get(key, []))
 
         # ✅ 얼굴 ID 기반 모자이크
         if "faces" in selected:
             face_infos = result.get("faces", [])
-            selected_val = selected["faces"]
-            if selected_val is True:
-                # faces 전체 다 적용
-                face_boxes = [face["box"] for face in face_infos]
-            else:
-                # 특정 ID만
-                face_boxes = [face["box"] for face in face_infos if face["id"] in selected_val]
+            face_boxes = [face["box"] for face in face_infos]
             all_boxes.extend(face_boxes)
 
         # ✅ 박스 변환 및 저장
