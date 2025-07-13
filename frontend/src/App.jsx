@@ -7,6 +7,7 @@ import NewPost from "./pages/newPost";
 import NotificationPage from "./pages/NotificationPage";
 import Profile from "./pages/profile";
 import EditProfile from "./pages/editProfile";
+import EditMosaic from "./pages/editMosaic";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/Home" element={<Home />} />
         <Route path="/SearchPage" element={<SearchPage />} />
         <Route path="/UploadPage" element={<NewPost />} />
+        <Route path="/editMosaic" element={<EditMosaic />} />
         <Route path="/notifications" element={<NotificationPage />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/editprofile" element={<EditProfile />} />
