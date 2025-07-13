@@ -21,17 +21,40 @@ export const createOrUpdatePost = async (post) => {
     }
     
 else if (post.files && Array.isArray(post.files)) {
-  for (const file of post.files) {
-    const isImage = file.type.includes("image");
-    const isVideo = file.type.includes("video");
+  const images = post.files.filter(file => file.type.includes("image"));
+  const videos = post.files.filter(file => file.type.includes("video"));
 
+  if (images.length > 0) {
     const formData = new FormData();
-    formData.append(isImage ? "image" : "video", file);
-    formData.append("selected", JSON.stringify(["faces", "phones", "license_plates", "addresses", "location_sensitive"]));
+    for (const img of images) {
+      formData.append("image", img);
+    }
+    formData.append("selected", JSON.stringify([
+      "faces", "phones", "license_plates", "addresses", "location_sensitive"
+    ]));
 
-    const endpoint = isImage ? "/api/protect-mosaic" : "/api/protect-video-mosaic";
+    const response = await axios.post(baseUrl + "/api/protect-mosaic", formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
-    const response = await axios.post(endpoint, formData, {
+    if (!response.data?.urls) {
+      return { success: false, msg: "모자이크 처리 실패" };
+    }
+
+    imageUrls = response.data.urls.map(url => baseUrl + url);
+  }
+
+  if (videos.length > 0) {
+    const formData = new FormData();
+    formData.append("video", videos[0]);
+    formData.append("selected", JSON.stringify([
+      "faces", "phones", "license_plates", "addresses", "location_sensitive"
+    ]));
+
+    const response = await axios.post(baseUrl + "/api/protect-video-mosaic", formData, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
@@ -39,12 +62,10 @@ else if (post.files && Array.isArray(post.files)) {
     });
 
     if (!response.data?.url) {
-      return { success: false, msg: "모자이크 처리 실패" };
+      return { success: false, msg: "비디오 모자이크 실패" };
     }
 
-    const fullUrl = baseUrl + response.data.url;
-    if (isImage) imageUrls.push(fullUrl);
-    else if (isVideo) videoUrl = fullUrl; // 하나만 처리한다는 전제
+    videoUrl = baseUrl + response.data.url;
   }
 }
 
