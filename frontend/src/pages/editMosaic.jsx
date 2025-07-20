@@ -12,7 +12,7 @@ const EditMosaic = () => {
 
   const [imageUrl] = useState(URL.createObjectURL(file));
   const [analysis, setAnalysis] = useState({});
-  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [selectedType, setSelectedType] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -60,16 +60,12 @@ const EditMosaic = () => {
   }, [file]);
 
   const handleMosaicApply = async () => {
-    if (!file || selectedTypes.length === 0) {
+    if (!file || !selectedType) {
       alert("모자이크할 항목을 선택해주세요.");
       return;
     }
 
-    const selectedDict = {};
-    selectedTypes.forEach((type) => {
-      selectedDict[type] = true;
-    });
-
+    const selectedDict = { [selectedType]: true };
     const type = file.type.startsWith("video") ? "video" : "image";
     const endpoint =
       type === "video" ? "/api/protect-video-mosaic" : "/api/protect-mosaic";
@@ -111,7 +107,6 @@ const EditMosaic = () => {
   return (
     <ScreenWrapper bg="white">
       <Header title="모자이크" showBack />
-
       <div
         style={{
           display: "flex",
@@ -133,13 +128,13 @@ const EditMosaic = () => {
               border: "1px solid #ccc",
             }}
           />
-          {/* 선택된 항목 박스 렌더링 */}
-          {selectedTypes.map((type) =>
-            (analysis[type] || []).map((item, i) => {
+          {/* 선택된 박스만 표시 */}
+          {selectedType &&
+            (analysis[selectedType] || []).map((item, i) => {
               const [x, y, w, h] = item.box || [0, 0, 100, 40];
               return (
                 <div
-                  key={`${type}-${i}`}
+                  key={`${selectedType}-${i}`}
                   style={{
                     position: "absolute",
                     top: y,
@@ -153,11 +148,10 @@ const EditMosaic = () => {
                   }}
                 />
               );
-            })
-          )}
+            })}
         </div>
 
-        {/* 탭 버튼 영역 */}
+        {/* 탭 버튼 */}
         <div
           style={{
             display: "flex",
@@ -171,23 +165,16 @@ const EditMosaic = () => {
             (type) => (
               <button
                 key={type}
-                onClick={() => {
-                  setSelectedTypes((prev) =>
-                    prev.includes(type)
-                      ? prev.filter((t) => t !== type)
-                      : [...prev, type]
-                  );
-                }}
+                onClick={() =>
+                  setSelectedType((prev) => (prev === type ? null : type))
+                }
                 style={{
                   padding: "8px 12px",
                   flex: 1,
-                  backgroundColor: selectedTypes.includes(type)
-                    ? theme.colors.primary
-                    : "#f0f0f0",
-                  color: selectedTypes.includes(type)
-                    ? "white"
-                    : theme.colors.text,
-                  fontWeight: selectedTypes.includes(type) ? "bold" : "normal",
+                  backgroundColor:
+                    selectedType === type ? theme.colors.primary : "#f0f0f0",
+                  color: selectedType === type ? "white" : theme.colors.text,
+                  fontWeight: selectedType === type ? "bold" : "normal",
                   border: "none",
                   borderRadius: 6,
                   margin: "0 4px",
