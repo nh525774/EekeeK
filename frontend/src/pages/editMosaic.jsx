@@ -12,8 +12,7 @@ const EditMosaic = () => {
 
   const [imageUrl] = useState(URL.createObjectURL(file));
   const [analysis, setAnalysis] = useState({});
-  const [activeTab, setActiveTab] = useState("");
-  const [selectedBoxes, setSelectedBoxes] = useState({});
+  const [selectedTypes, setSelectedTypes] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,14 +33,23 @@ const EditMosaic = () => {
         });
         const data = await res.json();
 
-        setAnalysis(data);
-        const defaultSelected = {};
-        Object.keys(data).forEach((key) => {
-          defaultSelected[key] = [];
-        });
-        setSelectedBoxes(defaultSelected);
-        const firstKey = Object.keys(data)[0];
-        if (firstKey) setActiveTab(firstKey);
+        const parsed =
+          type === "video"
+            ? {
+                faces: Array(data.faces || 0).fill({ box: [20, 30, 100, 100] }),
+                phones: Array(data.phones || 0).fill({
+                  box: [40, 150, 160, 30],
+                }),
+                addresses: Array(data.addresses || 0).fill({
+                  box: [20, 200, 180, 40],
+                }),
+                location_sensitive: Array(data.location_sensitive || 0).fill({
+                  box: [30, 260, 170, 40],
+                }),
+              }
+            : data;
+
+        setAnalysis(parsed);
       } catch (err) {
         console.error("❌ 분석 실패", err);
         alert("이미지 분석에 실패했습니다.");
@@ -51,26 +59,16 @@ const EditMosaic = () => {
     if (file) analyze();
   }, [file]);
 
-  const toggleBox = (i) => {
-    setSelectedBoxes((prev) => {
-      const current = prev[activeTab] || [];
-      const updated = current.includes(i)
-        ? current.filter((idx) => idx !== i)
-        : [...current, i];
-      return { ...prev, [activeTab]: updated };
-    });
-  };
-
   const handleMosaicApply = async () => {
-    const selectedDict = {};
-    Object.entries(selectedBoxes).forEach(([type, indexes]) => {
-      if (indexes.length > 0) selectedDict[type] = indexes;
-    });
-
-    if (!file || Object.keys(selectedDict).length === 0) {
+    if (!file || selectedTypes.length === 0) {
       alert("모자이크할 항목을 선택해주세요.");
       return;
     }
+
+    const selectedDict = {};
+    selectedTypes.forEach((type) => {
+      selectedDict[type] = true;
+    });
 
     const type = file.type.startsWith("video") ? "video" : "image";
     const endpoint =
@@ -122,6 +120,7 @@ const EditMosaic = () => {
           padding: 20,
         }}
       >
+        {/* 이미지 + 박스 */}
         <div
           style={{ position: "relative", alignSelf: "center", maxWidth: 400 }}
         >
@@ -134,29 +133,31 @@ const EditMosaic = () => {
               border: "1px solid #ccc",
             }}
           />
-          {(analysis[activeTab] || []).map((item, i) => {
-            const [x, y, w, h] = item.box || [0, 0, 100, 40];
-            const selected = selectedBoxes[activeTab]?.includes(i);
-            return (
-              <div
-                key={i}
-                onClick={() => toggleBox(i)}
-                style={{
-                  position: "absolute",
-                  top: y,
-                  left: x,
-                  width: w,
-                  height: h,
-                  border: "2px dashed red",
-                  backgroundColor: selected ? "rgba(0,0,0,0.3)" : "transparent",
-                  cursor: "pointer",
-                  borderRadius: 4,
-                }}
-              />
-            );
-          })}
+          {/* 선택된 항목 박스 렌더링 */}
+          {selectedTypes.map((type) =>
+            (analysis[type] || []).map((item, i) => {
+              const [x, y, w, h] = item.box || [0, 0, 100, 40];
+              return (
+                <div
+                  key={`${type}-${i}`}
+                  style={{
+                    position: "absolute",
+                    top: y,
+                    left: x,
+                    width: w,
+                    height: h,
+                    border: "2px dashed red",
+                    backgroundColor: "rgba(0,0,0,0.3)",
+                    pointerEvents: "none",
+                    borderRadius: 4,
+                  }}
+                />
+              );
+            })
+          )}
         </div>
 
+        {/* 탭 버튼 영역 */}
         <div
           style={{
             display: "flex",
@@ -166,28 +167,43 @@ const EditMosaic = () => {
             paddingTop: 8,
           }}
         >
-          {Object.keys(analysis).map((type) => (
-            <button
-              key={type}
-              onClick={() => setActiveTab(type)}
-              style={{
-                padding: "8px 12px",
-                flex: 1,
-                backgroundColor:
-                  activeTab === type ? theme.colors.primary : "#f0f0f0",
-                color: activeTab === type ? "white" : theme.colors.text,
-                fontWeight: activeTab === type ? "bold" : "normal",
-                border: "none",
-                borderRadius: 6,
-                margin: "0 4px",
-                cursor: "pointer",
-              }}
-            >
-              {type}
-            </button>
-          ))}
+          {["faces", "phones", "addresses", "location_sensitive"].map(
+            (type) => (
+              <button
+                key={type}
+                onClick={() => {
+                  setSelectedTypes((prev) =>
+                    prev.includes(type)
+                      ? prev.filter((t) => t !== type)
+                      : [...prev, type]
+                  );
+                }}
+                style={{
+                  padding: "8px 12px",
+                  flex: 1,
+                  backgroundColor: selectedTypes.includes(type)
+                    ? theme.colors.primary
+                    : "#f0f0f0",
+                  color: selectedTypes.includes(type)
+                    ? "white"
+                    : theme.colors.text,
+                  fontWeight: selectedTypes.includes(type) ? "bold" : "normal",
+                  border: "none",
+                  borderRadius: 6,
+                  margin: "0 4px",
+                  cursor: "pointer",
+                }}
+              >
+                {type === "faces" && "얼굴"}
+                {type === "phones" && "전화번호"}
+                {type === "addresses" && "주소"}
+                {type === "location_sensitive" && "위치"}
+              </button>
+            )
+          )}
         </div>
 
+        {/* 모자이크 적용 */}
         <div style={{ alignSelf: "center", marginTop: 20 }}>
           <Button
             title="모자이크 적용"
