@@ -128,7 +128,7 @@ const EditMosaic = () => {
               border: "1px solid #ccc",
             }}
           />
-          {/* 선택된 박스만 표시 */}
+          {/* 선택된 항목 박스 + 번호 */}
           {selectedType &&
             (analysis[selectedType] || []).map((item, i) => {
               const [x, y, w, h] = item.box || [0, 0, 100, 40];
@@ -146,7 +146,23 @@ const EditMosaic = () => {
                     pointerEvents: "none",
                     borderRadius: 4,
                   }}
-                />
+                >
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: -18,
+                      left: -6,
+                      backgroundColor: "red",
+                      color: "white",
+                      fontSize: 12,
+                      padding: "2px 6px",
+                      borderRadius: 12,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                </div>
               );
             })}
         </div>
@@ -190,7 +206,7 @@ const EditMosaic = () => {
           )}
         </div>
 
-        {/* 모자이크 적용 */}
+        {/* 모자이크 적용 버튼 */}
         <div style={{ alignSelf: "center", marginTop: 20 }}>
           <Button
             title="모자이크 적용"
