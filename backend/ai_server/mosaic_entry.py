@@ -4,30 +4,6 @@ from detect_utils import detect_personal_info
 from mosaic_utils import apply_mosaic
 import contextlib
 
-# 🔇 YOLO 로그 제거용
-'''
-@contextlib.contextmanager
-
-def suppress_stdout():
-    with open(os.devnull, 'w') as devnull:
-        old_stdout = sys.stdout
-        sys.stdout = devnull
-        try:
-            yield
-        finally:
-            sys.stdout = old_stdout
-            
-# YOLO 모델도 suppress된 상태에서 로드
-def load_model():
-    from ultralytics import YOLO
-    from ultralytics.cfg import get_cfg
-    model_path = os.path.join(os.path.dirname(__file__), "license_plate_detector.pt")
-    cfg = get_cfg(overrides={"verbose": False})
-    with suppress_stdout():
-        return YOLO(model_path, verbose=False)
-
-lp_model = load_model()
-'''
 
 # ✅ 입력 인자 처리
 image_paths = sys.argv[1:-1]
@@ -67,10 +43,18 @@ for image_path in image_paths:
             all_boxes.extend(face_boxes)
 
         # ✅ 박스 변환 및 저장
-        boxes = [to_box(p) for p in all_boxes]
+        boxes = []
+        for p in all_boxes :
+           x1, y1, x2, y2 = to_box(p)
+           w, h = x2 - x1, y2 - y1
+           if w <= 0 or h <= 0:
+                print(f"⚠️ 건너뜀: 잘못된 박스 w={w}, h={h}, 원본={p}")
+                continue
+           boxes.append((x1, y1, x2, y2)) 
+        
         if not boxes:
             print(json.dumps({ "error": "No mosaic targets found" }))
-            sys.exit(0)
+            continue
 
         filename = f"mosaic_{os.path.basename(image_path)}"
         output_path = os.path.join(static_dir, filename)

@@ -32,6 +32,8 @@ const EditMosaic = () => {
           body: formData,
         });
         const data = await res.json();
+        
+
 
         const parsed =
           type === "video"
@@ -47,7 +49,7 @@ const EditMosaic = () => {
                   box: [30, 260, 170, 40],
                 }),
               }
-            : data;
+            : data.results[0] || {};
 
         setAnalysis(parsed);
       } catch (err) {
@@ -58,12 +60,25 @@ const EditMosaic = () => {
 
     if (file) analyze();
   }, [file]);
+useEffect(() => {
+  console.log("🧠 분석 결과 전체:", analysis);
+}, [analysis]);
+
+useEffect(() => {
+  console.log("📌 선택된 타입:", selectedType);
+  if (selectedType) {
+    console.log("📦 해당 타입 박스 목록:", analysis[selectedType]);
+  }
+}, [selectedType, analysis]);
+
 
   const handleMosaicApply = async () => {
     if (!file || !selectedType) {
       alert("모자이크할 항목을 선택해주세요.");
       return;
     }
+
+  
 
     const selectedDict = { [selectedType]: true };
     const type = file.type.startsWith("video") ? "video" : "image";
@@ -81,16 +96,19 @@ const EditMosaic = () => {
         body: formData,
       });
       const text = await res.text();
+      console.log("📤 Raw mosaic response:", text);
       const lastLine = text.trim().split("\n").pop();
       const data = JSON.parse(lastLine);
+      const fileUrl = data.url || (data.urls && data.urls[0]); // 배열 대응 추가
+      if (!fileUrl) throw new Error("응답에 url이 없습니다");
+      
       const blob = await (
-        await fetch("http://localhost:5000" + data.url)
-      ).blob();
+        await fetch("http://localhost:5000" + fileUrl)).blob();
       const mosaicFile = new File([blob], "mosaic_" + file.name, {
         type: blob.type,
       });
 
-      navigate("/new-post", {
+      navigate("/UploadPage", {
         state: {
           updatedFile: mosaicFile,
           index,

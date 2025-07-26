@@ -79,7 +79,7 @@ const NewPost = () => {
     if (res.success) {
       setFiles([]);
       bodyRef.current = "";
-      navigate(-1);
+      navigate("/Home");
     } else {
       alert("Post failed: " + res.msg);
     }
