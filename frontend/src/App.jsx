@@ -8,6 +8,7 @@ import NotificationPage from "./pages/NotificationPage";
 import Profile from "./pages/profile";
 import EditProfile from "./pages/editProfile";
 import EditMosaic from "./pages/editMosaic";
+import PostDetails from "./pages/postDetails";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/notifications" element={<NotificationPage />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/editprofile" element={<EditProfile />} />
+        <Route path="/postDetail" element={<PostDetails />} />
       </Routes>
     </BrowserRouter>
   );

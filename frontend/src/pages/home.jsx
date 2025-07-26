@@ -11,6 +11,7 @@ import Avatar from "../components/Avatar";
 import { useAuth } from "../contexts/authContext";
 import PostCard from "../components/PostCard";
 import PostList from "../components/postList";
+import { fetchPosts } from "../services/postService";
 
 var limit = 0;
 

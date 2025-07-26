@@ -1,5 +1,6 @@
 import axios from "axios";
 import { auth } from "../api/firebase";
+import { getIdToken } from "firebase/auth";
 //import { uploadFile } from "./imageService";
 
 export const createOrUpdatePost = async (post) => {
@@ -123,4 +124,14 @@ export const fetchPostById = async (postId) => {
     console.error("fetchPostById error: ", error);
     throw error;
   }
+
 };
+export const deletePostById = async (postId) => {
+    const token = await getIdToken(auth.currentUser);
+    return axios.delete(`/api/posts/${postId}`, {
+      headers: {
+        Authorization : `Bearer ${token}`,
+      },
+    });
+  };
+

@@ -3,6 +3,8 @@ import { hp } from "../helpers/common";
 import Heart from "../assets/icons/Heart";
 import Comment from "../assets/icons/Comment";
 import Share from "../assets/icons/Share";
+import { useState } from "react";
+import { deletePostById } from "../services/postService";
 
 const styles = {
   container: {
@@ -14,6 +16,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "12px",
+    cursor: "pointer"
   },
   header: {
     display: "flex",
@@ -72,9 +75,30 @@ const styles = {
   },
 };
 
-const PostCard = ({ item, currentUser }) => {
+const PostCard = ({ item, currentUser, navigate }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const isOwner = currentUser?.uid === item.userId;
   const likes = item?.likes || [];
   const liked = currentUser ? likes.includes(currentUser.uid) : false;
+
+  const handleClick = () => {
+    if (navigate && item?._id) {
+      navigate(`/postDetail?postId=${item._id}`);
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirm = window.confirm("게시물을 삭제하시겠습니까?")
+    if (!confirm) return;
+
+  try {
+    await deletePostById(item._id);
+    alert("삭제 완료!");
+    window.location.reload();
+  } catch (err) {
+    alert("삭제 실패 : " + err.message);
+  }
+};
 
   const renderImages = (urls) => {
     if (!urls || urls.length === 0) return null;
@@ -180,7 +204,7 @@ const PostCard = ({ item, currentUser }) => {
     );
   };
   return (
-    <div style={styles.container}>
+    <div style={styles.container} onClick={handleClick}>
       {/* header */}
       <div style={styles.header}>
         <div style={styles.userInfo}>
@@ -194,7 +218,53 @@ const PostCard = ({ item, currentUser }) => {
             <p style={styles.postTime}>{item?.createdAt || "Now"}</p>
           </div>
         </div>
-        <span style={{ cursor: "pointer" }}>⋮</span>
+        {isOwner && (
+          <div style={{ position: "relative" }}>
+            <span 
+            style={{ cursor: "pointer" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu((prev) => !prev);
+            }}
+            >⋮</span>
+            {showMenu && (
+              <div
+              style = {{
+                position: "absolute",
+                 top: "24px",
+                  right: 0,
+                  background: "#fff",
+                  border: "1px solid #ccc",
+                  borderRadius: "6px",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                  zIndex: 99,
+                  minWidth : "100px",
+                  padding: "4px 0",
+              }}
+              >
+              <button
+                onClick={handleDelete}
+                  style={{
+                    padding: "8px 16px",
+                    background: "none",
+                    border: "none",
+                    display: "flex", 
+                    textAlign: "left",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    width: "100%",
+                    height: "40px", 
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                >
+                  삭제
+              </button>
+              </div>
+            )}
+            </div>
+        )}
       </div>
 
       {/* body */}
