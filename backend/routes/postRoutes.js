@@ -76,5 +76,46 @@ router.delete("/:id", firebaseAuth, async(req, res) => {
     }
 });
 
+//게시글 좋아요
+router.get('/:id/like', firebaseAuth, async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.firebaseUid;
+
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ success : false, msg: "게시글 없음"});
+
+    if (!post.likes.includes(userId)) {
+      post.likes.push(userId);
+      await post.save();
+    }
+
+    res.json({ success: true, likes: post.likes });
+  } catch (err) {
+    console.error("좋아요 실패:", err);
+    res.status(500).json({ success: false, msg: "좋아요 실패" });
+  }
+});
+
+// 게시글 좋아요 취소
+router.get('/:id/unlike', firebaseAuth, async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.firebaseUid;
+
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ success: false, msg: "게시글 없음" });
+
+    if (post.likes.includes(userId)) {
+      post.likes = post.likes.filter(uid => uid !== userId);
+      await post.save();
+    }
+
+    res.json({ success: true, likes: post.likes });
+  } catch (err) {
+    console.error("좋아요 취소 실패:", err);
+    res.status(500).json({ success: false, msg: "좋아요 취소 실패" });
+  }
+});
 
 module.exports = router;

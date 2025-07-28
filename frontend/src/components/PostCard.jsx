@@ -5,6 +5,7 @@ import Comment from "../assets/icons/Comment";
 import Share from "../assets/icons/Share";
 import { useState } from "react";
 import { deletePostById } from "../services/postService";
+import { createPostLike } from "../services/postService";
 
 const styles = {
   container: {
@@ -78,8 +79,23 @@ const styles = {
 const PostCard = ({ item, currentUser, navigate }) => {
   const [showMenu, setShowMenu] = useState(false);
   const isOwner = currentUser?.uid === item.userId;
-  const likes = item?.likes || [];
-  const liked = currentUser ? likes.includes(currentUser.uid) : false;
+  const [likeCount, setLikeCount] = useState(item?.likes?.length || 0);
+  const [isLiked, setIsLiked] = useState(
+  currentUser ? item?.likes?.includes(currentUser.uid) : false
+);
+
+const handleLike = async (e) => {
+  e.stopPropagation();
+  if (!currentUser) return;
+
+  const result = await createPostLike(item._id);
+  if (result.success) {
+    setIsLiked((prev) => !prev);
+    setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
+  } else {
+    alert(result.msg || "좋아요 실패");
+  }
+};
 
   const handleClick = () => {
     if (navigate && item?._id) {
@@ -278,14 +294,14 @@ const PostCard = ({ item, currentUser, navigate }) => {
 
       {/* footer */}
       <div style={styles.footer}>
-        <button style={styles.iconButton}>
+        <button style={styles.iconButton} onClick={handleLike}>
           <Heart
             width={22}
             height={22}
-            color={liked ? theme.colors.rose : theme.colors.text}
+            color={isLiked ? theme.colors.rose : theme.colors.text}
             strokeWidth={1.6}
           />
-          <span style={styles.count}>{likes.length}</span>
+          <span style={styles.count}>{likeCount}</span>
         </button>
 
         <button style={styles.iconButton}>

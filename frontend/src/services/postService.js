@@ -135,3 +135,43 @@ export const deletePostById = async (postId) => {
     });
   };
 
+  export const createPostLike = async (postId) => {
+    try {
+      const token = await getIdToken(auth.currentUser);
+      const res = await axios.get(`/api/posts/${postId}/like`, {
+      headers: {
+        Authorization: `Bearer ${token}` 
+      },
+    });
+
+    if (res.data.success) {
+      return { success: true, likes: res.data.likes };
+    } else {
+      return { success: false, msg: res.data.msg || "좋아요 실패" };
+    }
+  } catch (err) {
+    console.error("createPostLike error:", err);
+    return { success: false, msg: "좋아요 중 오류 발생" };
+  }
+  };
+
+  export const removePostLike = async (postId) => {
+    try {
+      const token = await getIdToken(auth.currentUser);
+      const res = await axios.get(`/api/posts/${postId}/unlike`, {
+      headers: {
+        Authorization: `Bearer ${token}` 
+      },
+    });
+
+    if (res.data.success) {
+      return { success: true, likes: res.data.likes };
+    } 
+    else {
+      return { success : false, msg: res.data.msg || "좋아요 취소 실패"};
+    }
+  } catch (err) {
+    console.error("postLike error:", err);
+    return { success: false, msg: "좋아요 취소 중 오류 발생" };
+  }
+  };
