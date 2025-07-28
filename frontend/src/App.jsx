@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { FilesProvider } from "./contexts/FilesContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/home";
@@ -12,7 +13,8 @@ import PostDetails from "./pages/postDetails";
 
 function App() {
   return (
-    <BrowserRouter>
+    <FilesProvider>
+      <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -26,6 +28,7 @@ function App() {
         <Route path="/postDetail" element={<PostDetails />} />
       </Routes>
     </BrowserRouter>
+    </FilesProvider>
   );
 }
 

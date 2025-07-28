@@ -11,28 +11,32 @@ import { auth } from "../api/firebase.js";
 import Button from "../components/Button";
 import Icon from "../assets/icons";
 import { createOrUpdatePost } from "../services/postService";
+import { useFiles } from "../contexts/FilesContext";
 
 const NewPost = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const bodyRef = useRef("");
   const [loading, setLoading] = useState(false);
-  const [files, setFiles] = useState([]);
   const [title] = useState("");
+  const { files, setFiles } = useFiles();
 
   // ✅ EditMosaic에서 돌아왔을 때 해당 인덱스에 파일 교체
   useEffect(() => {
     const updatedFile = location.state?.updatedFile;
     const index = location.state?.index;
 
-    if (updatedFile != null && typeof index === "number") {
-      setFiles((prevFiles) => {
-        const updated = [...prevFiles];
-        updated[index] = updatedFile;
-        return updated;
-      });
+    if (updatedFile && typeof index === "number") {
+       setFiles(prev => {
+      const updated = [...prev];
+      updated[index] = updatedFile;
+      return updated;
+    });
     }
-  }, [location.state]);
+    
+    navigate(location.pathname, { replace: true });
+}, [location.pathname, location.state, navigate, setFiles]);
+
 
   const user = auth.currentUser;
   if (!user) {
@@ -111,10 +115,16 @@ const NewPost = () => {
         {/* 썸네일 미리보기 */}
         {files.length > 0 && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {files.map((file, i) => (
-              <div key={i} style={{ position: "relative", cursor: "pointer" }}>
+            {files.map((file, i) => {
+              if (!file) return null; // null/undefined 방어
+
+              const previewSrc = file instanceof Blob
+                ? URL.createObjectURL(file)
+                : file;
+              return (
+                <div key={i} style={{ position: "relative", cursor: "pointer" }}>
                 <img
-                  src={URL.createObjectURL(file)}
+                  src={previewSrc}
                   alt={`preview-${i}`}
                   style={{
                     width: "100px",
@@ -126,8 +136,7 @@ const NewPost = () => {
                     navigate("/editMosaic", {
                       state: {
                         file,
-                        index: i,
-                      },
+                        index: i },
                     })
                   }
                 />
@@ -153,8 +162,9 @@ const NewPost = () => {
                   ×
                 </button>
               </div>
-            ))}
-          </div>
+              );
+              })}
+              </div>
         )}
 
         {/* 글쓰기 에디터 */}

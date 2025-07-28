@@ -4,11 +4,13 @@ import ScreenWrapper from "../components/ScreenWrapper";
 import Header from "../components/Header";
 import Button from "../components/Button";
 import { theme } from "../constants/theme";
+import { useFiles } from "../contexts/FilesContext";
 
 const EditMosaic = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
   const { file, index } = state || {};
+  const { files, setFiles } = useFiles();
 
   const [imageUrl] = useState(URL.createObjectURL(file));
   const [analysis, setAnalysis] = useState({});
@@ -108,12 +110,12 @@ useEffect(() => {
         type: blob.type,
       });
 
-      navigate("/UploadPage", {
-        state: {
-          updatedFile: mosaicFile,
-          index,
-        },
-      });
+      const updatedFiles = [...files];
+      updatedFiles[index] = mosaicFile;
+      setFiles(updatedFiles);
+
+      navigate(-1);
+
     } catch (err) {
       console.error("❌ 모자이크 처리 실패", err);
       alert("모자이크 처리 중 오류가 발생했습니다.");
