@@ -34,8 +34,6 @@ const EditMosaic = () => {
           body: formData,
         });
         const data = await res.json();
-        
-
 
         const parsed =
           type === "video"
@@ -62,25 +60,12 @@ const EditMosaic = () => {
 
     if (file) analyze();
   }, [file]);
-useEffect(() => {
-  console.log("🧠 분석 결과 전체:", analysis);
-}, [analysis]);
-
-useEffect(() => {
-  console.log("📌 선택된 타입:", selectedType);
-  if (selectedType) {
-    console.log("📦 해당 타입 박스 목록:", analysis[selectedType]);
-  }
-}, [selectedType, analysis]);
-
 
   const handleMosaicApply = async () => {
     if (!file || !selectedType) {
       alert("모자이크할 항목을 선택해주세요.");
       return;
     }
-
-  
 
     const selectedDict = { [selectedType]: true };
     const type = file.type.startsWith("video") ? "video" : "image";
@@ -103,9 +88,10 @@ useEffect(() => {
       const data = JSON.parse(lastLine);
       const fileUrl = data.url || (data.urls && data.urls[0]); // 배열 대응 추가
       if (!fileUrl) throw new Error("응답에 url이 없습니다");
-      
+
       const blob = await (
-        await fetch("http://localhost:5000" + fileUrl)).blob();
+        await fetch("http://localhost:5000" + fileUrl)
+      ).blob();
       const mosaicFile = new File([blob], "mosaic_" + file.name, {
         type: blob.type,
       });
@@ -115,7 +101,6 @@ useEffect(() => {
       setFiles(updatedFiles);
 
       navigate(-1);
-
     } catch (err) {
       console.error("❌ 모자이크 처리 실패", err);
       alert("모자이크 처리 중 오류가 발생했습니다.");
@@ -148,6 +133,7 @@ useEffect(() => {
               border: "1px solid #ccc",
             }}
           />
+
           {/* 선택된 항목 박스 + 번호 */}
           {selectedType &&
             (analysis[selectedType] || []).map((item, i) => {
