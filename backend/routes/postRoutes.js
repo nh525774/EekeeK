@@ -118,4 +118,67 @@ router.get('/:id/unlike', firebaseAuth, async (req, res) => {
   }
 });
 
+//댓글 작성
+router.post("/:postId/comments", firebaseAuth, async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ success : false, msg: "댓글 내용을 입력하세요. "});
+    
+    const post = await Post.findById(req.params.postId);
+    if (!post) return res.status(404).json({ success: false, msg: "게시글을 찾을 수 없습니다. "});
+
+    const newComment = {
+      userId: String(req.firebaseUid),
+      userName: req.body.userName || "",
+      userImage: req.body.userImage || "",
+      text
+    };
+
+    post.comments.push(newComment);
+    await post.save();
+
+    res.json({ success : true, data: post.comments[post.comments.length - 1 ]});
+  } catch (err) {
+    res.status(500).json({ success: false, msg: err.message });
+  }
+});
+
+//댓글 삭제
+router.delete("/:postId/comments/:commentId", firebaseAuth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.postId);
+    if (!post) return res.status(404).json({ success: false, msg: "게시글을 찾을 수 없습니다. "});
+
+
+    const comment = post.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).json({ success: false, msg: "댓글을 찾을 수 없습니다." });
+
+    if (!comment.userId || !req.firebaseUid) {
+  return res.status(500).json({ success: false, msg: "유저 정보 없음" });
+}
+
+if (String(comment.userId) !== String(req.firebaseUid) &&
+  String(post.userId) !== String(req.firebaseUid)) {
+  console.log("❌ 권한 없음", {
+    commentUser: comment.userId,
+    postUser: post.userId,
+    currentUser: req.firebaseUid
+  });
+  return res.status(403).json({ success: false, msg: '권한 없음' });
+}
+
+
+  post.comments = post.comments.filter(
+  (c) => String(c._id) !== String(req.params.commentId)
+  );
+  await post.save();
+
+
+  res.json({ success: true, msg: "댓글이 삭제되었습니다." });
+  } catch (err) {
+    console.error("🔥 삭제 중 에러:", err);
+    res.status(500).json({ success: false, msg: err.message });
+  }
+});
+
 module.exports = router;

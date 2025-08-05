@@ -1,5 +1,4 @@
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Button from "../components/Button";
 import ScreenWrapper from "../components/ScreenWrapper";
@@ -13,7 +12,7 @@ import PostCard from "../components/PostCard";
 import PostList from "../components/postList";
 import { fetchPosts } from "../services/postService";
 
-var limit = 0;
+let limit = 5;
 
 const Home = () => {
   const { user } = useAuth();
@@ -23,51 +22,35 @@ const Home = () => {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const handlePostEvent = async (payload) => {
-    if (payload.eventType === "INSERT" && payload?.new?.id) {
-      let newPost = { ...payload.new };
-
-      try {
-        const res = await getUserById(newPost.userId); // Firebase UID로 유저 정보 가져오기
-        newPost.user = res.success
-          ? res.user
-          : {
-              name: "탈퇴한 사용자",
-              profileImage: "/default-profile.png",
-            };
-
-        setPosts((prevPosts) => [newPost, ...prevPosts]); // 최신 게시물을 앞에 추가
-      } catch (err) {
-        console.error("유저 정보 조회 실패:", err);
-      }
-    }
-  };
 
   useEffect(() => {
-    const fetchPosts = async () => {
+    const fetchInitialPosts = async () => {
       try {
-        const res = await axios.get("/api/posts");
-        if (res.data.success) {
-          setPosts(res.data.data);
-        }
-      } catch (err) {
+        const res = await fetchPosts(limit);
+        console.log("Initial posts data: ", res);
+        if (res.success) {
+          setPosts(res.data);
+          if (res.data.length < limit) setHasMore(false); // 🔹 데이터 부족 시 더 이상 로드 안 함
+      }
+    } catch (err) {
         console.error("게시글 로드 실패:", err);
       }
     };
-    fetchPosts();
+    fetchInitialPosts();
   }, []);
 
   const getPosts = async () => {
-    if (!hasMore) return;
+    if (!hasMore || loading) return;
     setLoading(true);
 
     limit += 5;
     try {
-      const token = localStorage.getItem("firebaseToken");
-      const res = await fetchPosts(limit, token);
+      const res = await fetchPosts(limit);
       if (res.success) {
-        if (posts.length === res.data.length) setHasMore(false);
-        setPosts(res.data);
+        if (res.data.data.length < limit ) {
+          setHasMore(false);
+        }
+        setPosts((prevPosts) => [...prevPosts, ...res.data]);
       }
     } catch (err) {
       console.error("게시물 가져오기 실패:", err.message);
@@ -131,37 +114,16 @@ const Home = () => {
           loadMore={getPosts}
           hasMore={hasMore}
         />
-
-        {/* 게시글 리스트 출력 */}
-        <div style={{ padding: "16px" }}>
-          {posts.length === 0 ? (
-            <p style={styles.noPosts}>아직 게시글이 없습니다.</p>
-          ) : (
-            posts.map((post) => {
-              const converted = {
-                ...post,
-                file: post.imageUrl || post.videoUrl,
-                body: post.content,
-              };
-              return (
-                <PostCard key={post._id} item={converted} currentUser={user} />
-              );
-            })
-          )}
-        </div>
-
-        {/* 필요 시 다른 콘텐츠 추가 */}
       </div>
     </ScreenWrapper>
   );
 };
 export default Home;
 
-export const styles = {
+const styles = {
   container: {
     display: "flex",
     flex: 1,
-
     flexDirection: "column", // 기본 방향 설정
     //paddingLeft: wp(4),
     //paddingRight: wp(4),
@@ -177,7 +139,7 @@ export const styles = {
   },
   title: {
     color: theme.colors?.text || "#000",
-    fontSize: hp(3.2), // hp(3.2) 대체
+    fontSize: hp(3.2),
     fontWeight: theme.fonts?.bold || "bold",
   },
   avatarImage: {

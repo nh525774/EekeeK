@@ -84,7 +84,7 @@ else if (post.files && Array.isArray(post.files)) {
       },
     }); // ← Express API endpoint
     if (res.data.success) {
-      return { success: true, data: res.data.data };
+      return { success: true, data: res.data };
     } else {
       return { success: false, msg: res.data.msg || "Post failed" };
     }
@@ -173,5 +173,41 @@ export const deletePostById = async (postId) => {
   } catch (err) {
     console.error("postLike error:", err);
     return { success: false, msg: "좋아요 취소 중 오류 발생" };
+  }
+  };
+
+  export const createComment = async (postId, text) => {
+    try {
+      const token = await getIdToken(auth.currentUser);
+      const res = await axios.post(`/api/posts/${postId}/comments`, 
+        { 
+          text,
+          userName: auth.currentUser.displayName || "익명",
+          userImage: auth.currentUser.photoURL || ""
+       }, 
+      { 
+        headers: {
+        Authorization: `Bearer ${token}`, 
+      },
+     }
+      ); 
+      return res.data;
+    } catch (err) {
+    console.error("comment error:", err);
+    return { success: false, msg: "댓글 작성 실패" };
+  }
+};
+
+  export const removeComment = async (postId, commentId) => {
+    try {
+      const token = await getIdToken(auth.currentUser);
+      const res = await axios.delete(`/api/posts/${postId}/comments/${commentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  } catch (err) {
+    console.error("comment error:", err);
+    return { success: false, msg: "댓글 삭제 실패" };
   }
   };

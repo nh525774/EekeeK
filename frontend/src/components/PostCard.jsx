@@ -76,13 +76,26 @@ const styles = {
   },
 };
 
-const PostCard = ({ item, currentUser, navigate }) => {
+const PostCard = ({ item, currentUser, navigate, showMoreIcon = true }) => {
   const [showMenu, setShowMenu] = useState(false);
-  const isOwner = currentUser?.uid === item.userId;
   const [likeCount, setLikeCount] = useState(item?.likes?.length || 0);
   const [isLiked, setIsLiked] = useState(
   currentUser ? item?.likes?.includes(currentUser.uid) : false
 );
+
+  // ✅ 기본값 처리
+  const isOwner = currentUser?.uid === item?.userId;
+  const userName = item?.user?.name || "User";
+  const userImage = item?.user?.image || "/defaultUser.png";
+  const postDate = item?.createdAt
+    ? new Date(item.createdAt).toLocaleDateString()
+    : "Now";
+
+const openPostDetails = () => {
+  if (navigate && item?._id) {
+  navigate(`/postDetail?postId=${item._id}`);
+}
+};
 
 const handleLike = async (e) => {
   e.stopPropagation();
@@ -104,17 +117,17 @@ const handleLike = async (e) => {
   };
 
   const handleDelete = async () => {
-    const confirm = window.confirm("게시물을 삭제하시겠습니까?")
-    if (!confirm) return;
-
-  try {
-    await deletePostById(item._id);
-    alert("삭제 완료!");
-    window.location.reload();
-  } catch (err) {
-    alert("삭제 실패 : " + err.message);
+    const confirmDelete = window.confirm("게시물을 삭제하시겠습니까?")
+    if (!confirmDelete) return;
+    try {
+      await deletePostById(item._id);
+      alert("삭제 완료!");
+      window.location.reload();
+    } catch (err) {
+      alert("삭제 실패 : " + err.message);
   }
 };
+
 
   const renderImages = (urls) => {
     if (!urls || urls.length === 0) return null;
@@ -201,8 +214,7 @@ const handleLike = async (e) => {
 
     return (
       <div
-        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}
-      >
+        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
         {urls.slice(0, 4).map((url, i) => (
           <img
             key={i}
@@ -224,17 +236,13 @@ const handleLike = async (e) => {
       {/* header */}
       <div style={styles.header}>
         <div style={styles.userInfo}>
-          <img
-            src={item?.user?.image || "/defaultUser.png"}
-            alt="avatar"
-            style={styles.avatar}
-          />
+          <img src={userImage} alt="avatar" style={styles.avatar} />
           <div>
-            <p style={styles.username}>{item?.user?.name || "User"}</p>
-            <p style={styles.postTime}>{item?.createdAt || "Now"}</p>
+            <p style={styles.username}>{userName}</p>
+            <p style={styles.postTime}>{postDate}</p>
           </div>
         </div>
-        {isOwner && (
+        {isOwner && showMoreIcon && (
           <div style={{ position: "relative" }}>
             <span 
             style={{ cursor: "pointer" }}
@@ -304,17 +312,17 @@ const handleLike = async (e) => {
           <span style={styles.count}>{likeCount}</span>
         </button>
 
-        <button style={styles.iconButton}>
+        <button style={styles.iconButton} onClick={openPostDetails}>
           <Comment
             width={22}
             height={22}
             color={theme.colors.textLight}
             strokeWidth={1.6}
           />
-          <span style={styles.count}>0</span>
+          <span style={styles.count}>{item.comments?.length || 0}</span>
         </button>
 
-        <button style={styles.iconButton}>
+        <button style={styles.iconButton} /*onClick={handleShare}*/>
           <Share
             width={22}
             height={22}
