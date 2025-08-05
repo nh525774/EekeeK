@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 const PostList = ({
   posts,
   currentUser,
-
   isLoading,
   loadMore,
   hasMore,
@@ -14,6 +13,9 @@ const PostList = ({
   const bottomRef = useRef(null);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+  }, [posts, hasMore]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -26,23 +28,44 @@ const PostList = ({
       { threshold: 0 }
     );
 
-    if (bottomRef.current) observer.observe(bottomRef.current);
+    const currentBottomRef = bottomRef.current;
+    if (currentBottomRef) observer.observe(currentBottomRef);
 
     return () => {
-      if (bottomRef.current) observer.unobserve(bottomRef.current);
+      if (currentBottomRef) observer.unobserve(currentBottomRef);
     };
-  }, [bottomRef, hasMore]);
+  }, [bottomRef, hasMore, loadMore]);
 
   return (
     <div className="flex flex-col gap-6">
-      {posts.map((item) => (
-        <PostCard
-          key={item._id || item.id}
-          item={item}
-          currentUser={currentUser}
-          navigate={navigate}
-        />
-      ))}
+      {posts.length === 0 ? (
+        <p>No posts available.</p> // 데이터가 없으면 메시지 표시
+      ) : (
+        posts.map((item, index) => {
+          //console.log("item._id:", item._id);
+          //console.log("item.id:", item.id); 
+
+        const safeItem = {
+          ...item,
+          _id: item._id || item.id || `temp-${index}-${Date.now()}-${Math.random()}`, // 🔹 key 보장
+          user: item.user && typeof item.user === "object"
+            ? item.user
+            : { name: "User", image: "/defaultUser.png" }, // 🔹 user null 방지
+        };
+
+
+  //console.log("Generated key for post:", safeItem._id);
+
+  return (
+    <PostCard
+      key={`${safeItem._id}-${index}`}
+      item={safeItem}
+      currentUser={currentUser}
+      navigate={navigate}
+    />
+  );
+})
+)}
 
       {/* Footer 상태 렌더링 */}
       <div
