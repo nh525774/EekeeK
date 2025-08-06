@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ScreenWrapper from "../components/ScreenWrapper";
 import Header from "../components/Header";
@@ -14,11 +14,36 @@ const EditMosaic = () => {
 
   const [imageUrl] = useState(URL.createObjectURL(file));
   const [analysis, setAnalysis] = useState({});
-  const [selectedType, setSelectedType] = useState("faces"); // Default to "faces"
+  const [selectedType, setSelectedType] = useState("faces");
   const [loading, setLoading] = useState(false);
-  const [selectedBoxes, setSelectedBoxes] = useState([]); // Track selected boxes
+  const [selectedBoxes, setSelectedBoxes] = useState([]);
+  const imgRef = useRef(null);
 
-  // 사진 분석 (페이지 로딩 시 자동 실행)
+  const isValidBox = (box) =>
+    Array.isArray(box) &&
+    box.length === 4 &&
+    box.every((n) => typeof n === "number");
+
+  const clampBox = (box, imgW, imgH) => {
+    if (!isValidBox(box)) return [0, 0, 0, 0];
+    let [x, y, w, h] = box;
+    x = Math.max(0, x);
+    y = Math.max(0, y);
+    w = Math.max(1, Math.min(w, imgW - x));
+    h = Math.max(1, Math.min(h, imgH - y));
+    return [x, y, w, h];
+  };
+  const convertPolygonToBox = (polygon) => {
+  if (!Array.isArray(polygon) || polygon.length < 4) return [0, 0, 0, 0];
+  const xs = polygon.map(p => p.x);
+  const ys = polygon.map(p => p.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  const w = Math.max(...xs) - x;
+  const h = Math.max(...ys) - y;
+  return [x, y, w, h];
+};
+
   useEffect(() => {
     const analyze = async () => {
       const type = file.type.startsWith("video") ? "video" : "image";
@@ -35,171 +60,176 @@ const EditMosaic = () => {
         });
         const data = await res.json();
 
-        // 분석된 데이터 처리 (비디오와 이미지에 따라 다르게 처리)
+        const wrapBoxes = (arr) =>
+          (arr || []).filter(Boolean).map((b) => {
+            if (Array.isArray(b) && b.length === 4 && typeof b[0] === "number") {
+              return { box: b };
+            }
+            if (Array.isArray(b) && b.length === 4 && typeof b[0] === "object" && "x" in b[0]) {
+              return { box: convertPolygonToBox(b) }; // 꼭짓점 배열 처리
+            }
+            return { box: [0, 0, 0, 0] };
+  });
+
         const parsed =
           type === "video"
             ? {
-                faces: Array(data.faces || 0).fill({ box: [20, 30, 100, 100] }),
-                phones: Array(data.phones || 0).fill({
-                  box: [40, 150, 160, 30],
-                }),
-                addresses: Array(data.addresses || 0).fill({
-                  box: [20, 200, 180, 40],
-                }),
-                location_sensitive: Array(data.location_sensitive || 0).fill({
-                  box: [30, 260, 170, 40],
-                }),
+                faces: wrapBoxes(data.faces),
+                phones: wrapBoxes(data.phones),
+                addresses: wrapBoxes(data.addresses),
+                location_sensitive: wrapBoxes(data.location_sensitive),
               }
-            : data.results[0] || {}; // 이미지 분석 결과
+            : {
+                faces: (data.results?.[0]?.faces || []).map(f => ({ box: f.box })),
+                phones: wrapBoxes(data.results?.[0]?.phones),
+                addresses: wrapBoxes(data.results?.[0]?.addresses),
+                location_sensitive: wrapBoxes(data.results?.[0]?.location_sensitive),
+              };
 
-        setAnalysis(parsed); // 분석 결과 저장
+        console.group("📦 분석된 박스 목록");
+        Object.entries(parsed).forEach(([key, arr]) => {
+          console.log(`🟡 ${key}: ${arr.length}개`);
+          arr.forEach((item, i) => {
+            console.log(`  #${i + 1}:`, item.box);
+          });
+        });
+        console.groupEnd();
+
+        setAnalysis(parsed);
       } catch (err) {
         console.error("❌ 분석 실패", err);
         alert("이미지 분석에 실패했습니다.");
       }
     };
 
-    // 파일이 있을 때만 분석 시작
     if (file) analyze();
   }, [file]);
 
-  // 사용자가 선택한 박스를 추가/삭제
   const toggleSelection = (box) => {
-    setSelectedBoxes((prevSelected) => {
-      if (prevSelected.includes(box)) {
-        return prevSelected.filter((item) => item !== box); // 이미 선택된 박스를 제외
-      }
-      return [...prevSelected, box]; // 새 박스를 선택
+    const boxKey = JSON.stringify(box);
+    setSelectedBoxes((prev) => {
+      const exists = prev.some((b) => JSON.stringify(b) === boxKey);
+      return exists
+        ? prev.filter((b) => JSON.stringify(b) !== boxKey)
+        : [...prev, box];
     });
   };
 
-  // 모자이크 적용 기능 (선택한 박스를 처리)
   const handleMosaicApply = async () => {
-    if (selectedBoxes.length === 0) {
-      alert("모자이크할 항목을 선택해주세요.");
-      return;
-    }
+  const type = file.type.startsWith("video") ? "video" : "image";
+  const endpoint = type === "video" ? "/api/protect-video-mosaic" : "/api/protect-mosaic";
 
-    const selectedDict = { [selectedType]: true };
-    const type = file.type.startsWith("video") ? "video" : "image";
-    const endpoint =
-      type === "video" ? "/api/protect-video-mosaic" : "/api/protect-mosaic";
+  const formData = new FormData();
+  formData.append(type, file);
 
-    const formData = new FormData();
-    formData.append(type, file);
-    formData.append("selected", JSON.stringify(selectedDict));
+  const selected = [selectedType]; // 지금 선택된 항목 1개만 적용
+  formData.append("selected", JSON.stringify(selected));
 
-    try {
-      setLoading(true);
-      const res = await fetch(endpoint, {
-        method: "POST",
-        body: formData,
-      });
-      const text = await res.text();
-      const lastLine = text.trim().split("\n").pop();
-      const data = JSON.parse(lastLine);
-      const fileUrl = data.url || (data.urls && data.urls[0]); // 배열 대응 추가
-      if (!fileUrl) throw new Error("응답에 url이 없습니다");
+  try {
+    setLoading(true);
+    const res = await fetch(endpoint, {
+      method: "POST",
+      body: formData,
+    });
 
-      const blob = await (
-        await fetch("http://localhost:5000" + fileUrl)
-      ).blob();
-      const mosaicFile = new File([blob], "mosaic_" + file.name, {
-        type: blob.type,
-      });
+    const text = await res.text();
+    const lastLine = text.trim().split("\n").pop();
+    const data = JSON.parse(lastLine);
+    const fileUrl = data.url || (data.urls && data.urls[0]);
+    if (!fileUrl) throw new Error("응답에 url이 없습니다");
 
-      const updatedFiles = [...files];
-      updatedFiles[index] = mosaicFile;
-      setFiles(updatedFiles);
+    const blob = await (await fetch("http://localhost:5000" + fileUrl)).blob();
+    const mosaicFile = new File([blob], "mosaic_" + file.name, { type: blob.type });
 
-      navigate(-1);
-    } catch (err) {
-      console.error("❌ 모자이크 처리 실패", err);
-      alert("모자이크 처리 중 오류가 발생했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const updatedFiles = [...files];
+    updatedFiles[index] = mosaicFile;
+    setFiles(updatedFiles);
+    navigate(-1);
+  } catch (err) {
+    console.error("❌ 모자이크 처리 실패", err);
+    alert("모자이크 처리 중 오류가 발생했습니다.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   return (
     <ScreenWrapper bg="white">
       <Header title="모자이크" showBack />
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 20,
-          padding: 20,
-        }}
-      >
-        {/* 이미지 + 박스 */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: 20 }}>
         <div style={{ position: "relative", alignSelf: "center", maxWidth: 400 }}>
           <img
+            ref={imgRef}
             src={imageUrl}
             alt="preview"
             style={{
               width: "100%",
+              display: "block",
               borderRadius: 12,
               border: "1px solid #ccc",
             }}
           />
 
-          {/* 선택된 항목 박스 + 번호 */}
-          {selectedType &&
-            (analysis[selectedType] || []).map((item, i) => {
-              // 이미지 요소 가져오기
-              const imgElement = document.querySelector("img"); // 이미지 요소
-              const imgWidth = imgElement?.naturalWidth || 1; // 원본 이미지의 width
-              const imgHeight = imgElement?.naturalHeight || 1; // 원본 이미지의 height
+          {(analysis[selectedType] || []).map((item, i) => {
+            const box = item.box;
+            if (!isValidBox(box)) return null;
 
-              // 분석된 박스를 이미지 크기에 맞게 스케일링하는 비율 계산
-              const scaleX = imgWidth / imgElement.width; // 이미지 비율 계산
-              const scaleY = imgHeight / imgElement.height;
+            const imgElement = imgRef.current;
+            if (!imgElement) return null;
 
-              // 박스 좌표를 이미지 크기에 맞게 변환
-              const [x, y, w, h] = item.box || [0, 0, 100, 40];
-              const scaledX = x * scaleX;
-              const scaledY = y * scaleY;
-              const scaledW = w * scaleX;
-              const scaledH = h * scaleY;
+            const naturalWidth = imgElement.naturalWidth || 1;
+            const naturalHeight = imgElement.naturalHeight || 1;
+            const displayWidth = imgElement.clientWidth || 1;
+            const displayHeight = imgElement.clientHeight || 1;
 
-              return (
-                <div
-                  key={`${selectedType}-${i}`}
+            const scaleX = displayWidth / naturalWidth;
+            const scaleY = displayHeight / naturalHeight;
+
+            const [x, y, w, h] = clampBox(box, naturalWidth, naturalHeight);
+            const scaledX = x * scaleX;
+            const scaledY = y * scaleY;
+            const scaledW = Math.max(w * scaleX, 8);
+            const scaledH = Math.max(h * scaleY, 8);
+
+            return (
+              <div
+                key={`${selectedType}-${i}`}
+                onClick={() => toggleSelection(item.box)}
+                style={{
+                  position: "absolute",
+                  top: scaledY,
+                  left: scaledX,
+                  width: scaledW,
+                  height: scaledH,
+                  border: "2px dashed red",
+                  backgroundColor: "rgba(0,0,0,0.3)",
+                  cursor: "pointer",
+                  pointerEvents: "auto",
+                  borderRadius: 4,
+                }}
+              >
+                <span
                   style={{
                     position: "absolute",
-                    top: scaledY,
-                    left: scaledX,
-                    width: scaledW,
-                    height: scaledH,
-                    border: "2px dashed red",
-                    backgroundColor: "rgba(0,0,0,0.3)",
-                    pointerEvents: "none",
-                    borderRadius: 4,
+                    top: -18,
+                    left: -6,
+                    backgroundColor: "red",
+                    color: "white",
+                    fontSize: 12,
+                    padding: "2px 6px",
+                    borderRadius: 12,
+                    fontWeight: "bold",
                   }}
-                  onClick={() => toggleSelection(item.box)} // Toggle selection on click
                 >
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: -18,
-                      left: -6,
-                      backgroundColor: "red",
-                      color: "white",
-                      fontSize: 12,
-                      padding: "2px 6px",
-                      borderRadius: 12,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {i + 1}
-                  </span>
-                </div>
-              );
-            })}
+                  {i + 1}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
-        {/* 탭 버튼 */}
         <div
           style={{
             display: "flex",
@@ -209,40 +239,32 @@ const EditMosaic = () => {
             paddingTop: 8,
           }}
         >
-          {["faces", "phones", "addresses", "location_sensitive"].map(
-            (type) => (
-              <button
-                key={type}
-                onClick={() => setSelectedType(type)}
-                style={{
-                  padding: "8px 12px",
-                  flex: 1,
-                  backgroundColor:
-                    selectedType === type ? theme.colors.primary : "#f0f0f0",
-                  color: selectedType === type ? "white" : theme.colors.text,
-                  fontWeight: selectedType === type ? "bold" : "normal",
-                  border: "none",
-                  borderRadius: 6,
-                  margin: "0 4px",
-                  cursor: "pointer",
-                }}
-              >
-                {type === "faces" && "얼굴"}
-                {type === "phones" && "전화번호"}
-                {type === "addresses" && "주소"}
-                {type === "location_sensitive" && "위치"}
-              </button>
-            )
-          )}
+          {["faces", "phones", "addresses", "location_sensitive"].map((type) => (
+            <button
+              key={type}
+              onClick={() => setSelectedType(type)}
+              style={{
+                padding: "8px 12px",
+                flex: 1,
+                backgroundColor: selectedType === type ? theme.colors.primary : "#f0f0f0",
+                color: selectedType === type ? "white" : theme.colors.text,
+                fontWeight: selectedType === type ? "bold" : "normal",
+                border: "none",
+                borderRadius: 6,
+                margin: "0 4px",
+                cursor: "pointer",
+              }}
+            >
+              {type === "faces" && "얼굴"}
+              {type === "phones" && "전화번호"}
+              {type === "addresses" && "주소"}
+              {type === "location_sensitive" && "위치"}
+            </button>
+          ))}
         </div>
 
-        {/* 모자이크 적용 버튼 */}
         <div style={{ alignSelf: "center", marginTop: 20 }}>
-          <Button
-            title="모자이크 적용"
-            onPress={handleMosaicApply}
-            loading={loading}
-          />
+          <Button title="모자이크 적용" onPress={handleMosaicApply} loading={loading} />
         </div>
       </div>
     </ScreenWrapper>
