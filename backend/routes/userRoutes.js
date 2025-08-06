@@ -1,8 +1,17 @@
+import express from "express";
+import { followUser, unfollowUser,getFollowStatus  } from "../controllers/userController.js";
+import { verifyToken } from "../middleware/authMiddleware.js"; // JWT 인증 가정
+
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const firebaseAuth = require('../middleware/firebaseAuth');
 
+router.get("/:id/follow-status", verifyToken, getFollowStatus);//팔로우 상태 조회
+router.post("/:id/follow", verifyToken, followUser); // 팔로우
+router.post("/:id/unfollow", verifyToken, unfollowUser);//언팔로우
+
+export default router;
 //내 프로필 조회
 router.get('/me', firebaseAuth, async(req, res) => {
     console.log(' GET /api/users/me 요청 도착! uid=', req.firebaseUid);
