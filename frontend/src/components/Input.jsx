@@ -5,7 +5,7 @@ import { styles } from "../constants/styles";
 
 const Input = (props) => {
   return (
-    <div style={{ ...styles.inputContainer, ...props.containerStyles }}>
+    <div style={{ ...styles.inputContainer, ...props.containerStyle && props.containerStyles }}>
       {props.icon && props.icon}
       <input
         style={{ flex: 1, border: "none", outline: "none", fontSize: "16px" }}

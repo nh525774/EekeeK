@@ -14,9 +14,11 @@ const EditMosaic = () => {
 
   const [imageUrl] = useState(URL.createObjectURL(file));
   const [analysis, setAnalysis] = useState({});
-  const [selectedType, setSelectedType] = useState(null);
+  const [selectedType, setSelectedType] = useState("faces"); // Default to "faces"
   const [loading, setLoading] = useState(false);
+  const [selectedBoxes, setSelectedBoxes] = useState([]); // Track selected boxes
 
+  // 사진 분석 (페이지 로딩 시 자동 실행)
   useEffect(() => {
     const analyze = async () => {
       const type = file.type.startsWith("video") ? "video" : "image";
@@ -24,9 +26,7 @@ const EditMosaic = () => {
       formData.append(type, file);
 
       const endpoint =
-        type === "video"
-          ? "/api/protect-video-analyze"
-          : "/api/protect-analyze";
+        type === "video" ? "/api/protect-video-analyze" : "/api/protect-analyze";
 
       try {
         const res = await fetch(endpoint, {
@@ -35,6 +35,7 @@ const EditMosaic = () => {
         });
         const data = await res.json();
 
+        // 분석된 데이터 처리 (비디오와 이미지에 따라 다르게 처리)
         const parsed =
           type === "video"
             ? {
@@ -49,20 +50,32 @@ const EditMosaic = () => {
                   box: [30, 260, 170, 40],
                 }),
               }
-            : data.results[0] || {};
+            : data.results[0] || {}; // 이미지 분석 결과
 
-        setAnalysis(parsed);
+        setAnalysis(parsed); // 분석 결과 저장
       } catch (err) {
         console.error("❌ 분석 실패", err);
         alert("이미지 분석에 실패했습니다.");
       }
     };
 
+    // 파일이 있을 때만 분석 시작
     if (file) analyze();
   }, [file]);
 
+  // 사용자가 선택한 박스를 추가/삭제
+  const toggleSelection = (box) => {
+    setSelectedBoxes((prevSelected) => {
+      if (prevSelected.includes(box)) {
+        return prevSelected.filter((item) => item !== box); // 이미 선택된 박스를 제외
+      }
+      return [...prevSelected, box]; // 새 박스를 선택
+    });
+  };
+
+  // 모자이크 적용 기능 (선택한 박스를 처리)
   const handleMosaicApply = async () => {
-    if (!file || !selectedType) {
+    if (selectedBoxes.length === 0) {
       alert("모자이크할 항목을 선택해주세요.");
       return;
     }
@@ -83,7 +96,6 @@ const EditMosaic = () => {
         body: formData,
       });
       const text = await res.text();
-      console.log("📤 Raw mosaic response:", text);
       const lastLine = text.trim().split("\n").pop();
       const data = JSON.parse(lastLine);
       const fileUrl = data.url || (data.urls && data.urls[0]); // 배열 대응 추가
@@ -121,9 +133,7 @@ const EditMosaic = () => {
         }}
       >
         {/* 이미지 + 박스 */}
-        <div
-          style={{ position: "relative", alignSelf: "center", maxWidth: 400 }}
-        >
+        <div style={{ position: "relative", alignSelf: "center", maxWidth: 400 }}>
           <img
             src={imageUrl}
             alt="preview"
@@ -137,21 +147,37 @@ const EditMosaic = () => {
           {/* 선택된 항목 박스 + 번호 */}
           {selectedType &&
             (analysis[selectedType] || []).map((item, i) => {
+              // 이미지 요소 가져오기
+              const imgElement = document.querySelector("img"); // 이미지 요소
+              const imgWidth = imgElement?.naturalWidth || 1; // 원본 이미지의 width
+              const imgHeight = imgElement?.naturalHeight || 1; // 원본 이미지의 height
+
+              // 분석된 박스를 이미지 크기에 맞게 스케일링하는 비율 계산
+              const scaleX = imgWidth / imgElement.width; // 이미지 비율 계산
+              const scaleY = imgHeight / imgElement.height;
+
+              // 박스 좌표를 이미지 크기에 맞게 변환
               const [x, y, w, h] = item.box || [0, 0, 100, 40];
+              const scaledX = x * scaleX;
+              const scaledY = y * scaleY;
+              const scaledW = w * scaleX;
+              const scaledH = h * scaleY;
+
               return (
                 <div
                   key={`${selectedType}-${i}`}
                   style={{
                     position: "absolute",
-                    top: y,
-                    left: x,
-                    width: w,
-                    height: h,
+                    top: scaledY,
+                    left: scaledX,
+                    width: scaledW,
+                    height: scaledH,
                     border: "2px dashed red",
                     backgroundColor: "rgba(0,0,0,0.3)",
                     pointerEvents: "none",
                     borderRadius: 4,
                   }}
+                  onClick={() => toggleSelection(item.box)} // Toggle selection on click
                 >
                   <span
                     style={{
@@ -187,9 +213,7 @@ const EditMosaic = () => {
             (type) => (
               <button
                 key={type}
-                onClick={() =>
-                  setSelectedType((prev) => (prev === type ? null : type))
-                }
+                onClick={() => setSelectedType(type)}
                 style={{
                   padding: "8px 12px",
                   flex: 1,

@@ -21,5 +21,5 @@ export const uploadFile = async (folderName, file) => {
 };
 
 export function getUserImageSrc(user) {
-  return user?.image || "/defaultUser.png"; // ✅ public/defaultUser.png 경로 기준
+  return user?.image || "/defaultUser.png"; // ✅ public/defaultUser.png 기준
 }
