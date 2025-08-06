@@ -14,11 +14,9 @@ const Profile = () => {
   const navigate = useNavigate();
   const onLogout = async () => {
     try {
-      await auth.signOut(); // Firebase 로그아웃 수행
-      localStorage.removeItem("firebaseToken"); // 저장된 토큰 제거 (있다면)
+      await auth.signOut();
+      localStorage.removeItem("firebaseToken");
       console.log("로그아웃 완료");
-
-      // 페이지 이동
       navigate("/");
     } catch (error) {
       console.error("로그아웃 실패:", error.message);
@@ -27,17 +25,17 @@ const Profile = () => {
   };
 
   const user = {
-    name: "User",
-    // 실제 프로젝트에서는 context나 props로 유저 정보 받아와
+    name: "내 닉네임",
+    bio: "안녕하세요! 자기소개입니다.",
+    address: "",
+    image: "/defaultUser.png",
+    followerCount: 45,
+    followingCount: 30,
   };
+
   const handleLogout = async () => {
     const confirmed = window.confirm("정말 로그아웃 하시겠습니까?");
-    if (!confirmed) {
-      console.log("사용자가 취소했음");
-      return;
-    }
-
-    // 실제 로그아웃 실행
+    if (!confirmed) return;
     await onLogout();
   };
 
@@ -65,46 +63,42 @@ const UserHeader = ({ user, navigate, handleLogout }) => {
           }
         />
       </div>
-      <div style={styles.container}>
-        <div style={{ gap: 15 }}>
-          <div style={styles.avatarContainer}>
-            <Avatar
-              uri={user?.image}
-              size={hp(12)}
-              rounded={theme.radius.xxl * 1.4}
-            />
-            <div
-              onClick={() => navigate("/editProfile")}
-              style={styles.editIcon}
-            >
-              <Icon name="Edit" strokeWidth={2.5} size={20} />
-            </div>
-          </div>
-          {/*username and address*/}
-          <div
-            style={{
-              alignItems: "center",
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-            }}
-          >
-            <p style={styles.userName}>{user && user.name}</p>
-            <p style={styles.infoText}>{user && user.address}</p>
-          </div>
-          {/*email., phon ., bio*/}
-          <div
-            style={{
-              gap: 10,
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <p style={{ ...styles.infoText, textAlign: "center" }}>
-              {user.bio}
-            </p>
+
+      {/* 중앙 정렬 블록: 아바타 + 닉네임 + 자기소개 */}
+      <div style={styles.centerBlock}>
+        <div style={styles.avatarContainer}>
+          <Avatar
+            uri={user?.image}
+            size={hp(12)}
+            rounded={theme.radius.xxl * 1.4}
+          />
+          <div onClick={() => navigate("/editProfile")} style={styles.editIcon}>
+            <Icon name="Edit" strokeWidth={2.5} size={20} />
           </div>
         </div>
+
+        <p style={styles.userName}>{user.name}</p>
+
+        {/* ✅ 자기소개 중앙 정렬 */}
+        <p style={{ ...styles.infoText, textAlign: "center", marginTop: 4 }}>
+          {user.bio}
+        </p>
+      </div>
+
+      {/* 팔로잉 / 팔로워 + 팔로우 버튼 */}
+      <div style={styles.followRow}>
+        {/* 팔로잉 / 팔로워 */}
+        <div style={styles.followNumbers}>
+          <p>
+            following <b>{user.followingCount}</b>
+          </p>
+          <p>
+            follower <b>{user.followerCount}</b>
+          </p>
+        </div>
+
+        {/* 팔로우 버튼 */}
+        <button style={styles.followButton}>팔로우</button>
       </div>
     </div>
   );
@@ -172,5 +166,59 @@ export const styles = {
     fontSize: hp(2),
     textAlign: "center",
     color: theme.colors.text,
+  },
+  centerBlock: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center", // 중앙 정렬
+    marginTop: hp(4),
+    gap: 8,
+  },
+
+  leftBlock: {
+    width: "100%",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start", // 왼쪽 정렬
+    padding: "0 20px",
+    marginTop: 12,
+    gap: 4,
+  },
+
+  followSection: {
+    display: "flex",
+    justifyContent: "flex-start",
+    gap: 16,
+    fontSize: hp(1.6),
+    fontWeight: "500",
+    color: theme.colors.textDark,
+  },
+  followRow: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "space-between", // 좌우 배치
+    alignItems: "center",
+    padding: "0 20px",
+    marginTop: 12,
+  },
+
+  followNumbers: {
+    display: "flex",
+    gap: 16,
+    fontSize: hp(1.6),
+    fontWeight: "500",
+    color: theme.colors.textDark,
+  },
+
+  followButton: {
+    backgroundColor: theme.colors.hotpink,
+    color: "white",
+    border: "none",
+    borderRadius: 20,
+    padding: "4px 12px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    minWidth: 80,
+    textAlign: "center",
   },
 };
