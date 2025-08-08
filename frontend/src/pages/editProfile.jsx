@@ -1,164 +1,136 @@
 import React, { useEffect, useState } from "react";
-import { hp, wp } from "../helpers/common";
-import { useNavigate } from "react-router-dom";
-import Icon from "../assets/icons";
-import Avatar from "../components/Avatar";
-import { useAuth } from "../contexts/authContext";
-import { getUserImageSrc, uploadFile } from "../services/imageService";
-import { updateUser } from "../services/userService";
-import theme from "../constants/theme";
+import ScreenWrapper from "../components/ScreenWrapper.jsx";
+import Header from "../components/Header.jsx";
+import { useAuth } from "../contexts/authContext.jsx";
+import { getUserImageSrc } from "../services/imageService.js";
+import Icon from "../assets/icons/index.jsx";
+import { theme } from "../constants/theme.js";
+import { hp, wp } from "../helpers/common.js";
 
 const EditProfile = () => {
+  const { user: currentUser, loading } = useAuth();
 
-  const {user: currentUser, setUserData} = useAuth();
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-
-  const [user, setUser] = useState({
-    name: '',
-    phoneNumber: '',
+  const { user, setUser } = useState({
+    name: "",
     image: null,
-    bio: '',
-    address: ''
+    bio: "",
   });
 
   useEffect(() => {
     if (currentUser) {
       setUser({
-        name: currentUser.name || '',
-        phoneNumber: currentUser.phoneNumber || '',
-        image: currentUser.image || null,
-        address: currentUser.address || '',
-        bio: currentUser.bio || '',
+        name: currentUser.name || "",
+        image: currentUser.image || "",
+        bio: currentUser.bio || "",
       });
     }
-  }, [currentUser])
+  }, [currentUser]);
 
-  const onPickImage = async () => {
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = "image/*";
-    fileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        setUser({ ...user, image: file });
-      }
-    };
-    fileInput.click();
+  if (loading) return <p>로딩 중...</p>;
+  if (!user) return <p>로그인이 필요합니다.</p>;
+
+  const imageSource = getUserImageSrc(user.image);
+
+  const onPickImage = () => {
+    console.log("이미지 선택 실행");
   };
-
-  const onSubmit = async () => {
-    let userData = {...user};
-    let {name, phoneNumber, address, image, bio } = userData;
-    if(!name || !phoneNumber || !address || !bio || !image) {
-      alert('Profile, "Please fill all the fields');
-      return;
-    }
-    setLoading(true);
-
-    if (typeof image == 'object') {
-      //upload image
-      const res = await uploadFile("profiles", image);
-      if (res.success) userData.image = res.url;
-      else userData.image = null;
-    }
-    
-    //update user
-    const res = await updateUser(currentUser?.id, userData);
-    setLoading(false);
-    
-    if (res.success) {
-      setUserData({ ...currentUser, ...userData });
-      navigate(-1); // 뒤로 가기
-    } else {
-      alert("업데이트 실패");
-    }
-  };
-
-  const imageSource =
-    user.image && typeof user.image === "object"
-      ? URL.createObjectURL(user.image)
-      : getUserImageSrc(user);
 
   return (
-    <div style={styles.container}>
-      <h2>Edit Profile</h2>
-          {/* form */}
-          <div style={styles.avatarContainerr}>
-            <Img src={imageSource} alt="avatar" style={styles.avatar} />
-              <button onClick={onPickImage} style={styles.cameraIcon}>
-                <Icon name="camera" size={20} strokeWidth={2.5} />
-              </button>
-          </div>
-          <p style={styles.hint}>
-            Please fill your profile details
-          </p>
-          <Input 
-            icon={<Icon name="user" />}
-            palceholder='Enter your name'
-            value={user.name}
-            onChange={(e) => setUser({...user, name: e.target.value})}
-            />
-            <Input 
-            icon={<Icon name="call" />}
-            palceholder='Enter your phone number'
-            value={user.phoneNumber}
-            onChange={(e) => setUser({ ...user, phoneNumber: e.target.value })}
-            />
-            <Input 
-            icon={<Icon name="location" />}
-            palceholder='Enter your address'
-            value={user.address}
-            onChange={(e) => setUser({ ...user, address: e.target.value })}
-            />
-            <Input 
-            palceholder='Enter your bio'
-            value={user.bio}
-            multiline={true}
-            containerStyle={styles.bio}
-           onChange={(e) => setUser({ ...user, bio: e.target.value })}
-            />
+    <ScreenWrapper bg="white">
+      <div style={{ flex: 1, backgroundColor: "white", padding: "16px" }}>
+        {/* Header */}
+        <Header title="Edit Profile" showBack />
 
-            <button onClick={onSubmit} style={styles.submitButton}>
-        {loading ? "Updating..." : "Update"}
-      </button>
+        {/* 중앙 정렬 블록 */}
+        <div style={styles.centerBlock}>
+          <div style={styles.avatarContainer}>
+            <img src={imageSource} alt="User Avatar" style={styles.avatar} />
+
+            {/* 카메라 버튼 */}
+            <div style={styles.cameraIcon} onClick={onPickImage}>
+              <Icon name="Camera" size={20} strokeWidth={2.5} />
+            </div>
+          </div>
+        </div>
+        <div style={styles.form}>
+          <p style={{ fontSize: hp(1.5), color: theme.colors.text }}>
+            Please fill your frofile details
+          </p>
+        </div>
+        <Input
+          icon={<Icon name="User"></Icon>}
+          placeholder="Enter your name"
+          value={user.name}
+          onChangeText={(value) => setUser({ ...user, name: value })}
+        />
+        <Input
+          icon={<Icon name="Edit"></Icon>}
+          placeholder="Enter your bio"
+          value={user.bio}
+          multiline={true}
+          onChangeText={(value) => setUser({ ...user, bio: value })}
+        />
       </div>
+    </ScreenWrapper>
   );
 };
 
 export default EditProfile;
-
-
 const styles = {
+  scrollArea: {
+    flex: 1,
+    overflowY: "auto", // 🔥 ScrollView 역할
+    display: "flex",
+    flexDirection: "column",
+  },
+  contentWrapper: {
+    flex: 1,
+    display: "flex",
+    justifyContent: "center", // 🔥 세로 중앙
+    alignItems: "center", // 🔥 가로 중앙
+    minHeight: "100vh", // 화면 꽉 차게
+  },
   container: {
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    paddingHorizontal: wp(4)
+    alignItems: "center", // 가로 중앙
+    justifyContent: "center", // 세로 중앙
+    height: "100%", // 세로 높이 확보
+    paddingHorizontal: wp(4),
+  },
+  centerBlock: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center", // 🔥 중앙정렬
+    marginTop: hp(4),
+    gap: 8,
   },
   avatarContainer: {
-    height: hp(14),
-    width: hp(14),
     position: "relative",
+    height: hp(12),
+    width: hp(12),
   },
   avatar: {
-    width: '100%',
-    height: '100%',
-    borderRadius: theme.radius.xxl*1.8,
+    width: "100%",
+    height: "100%",
     objectFit: "cover",
-    border: "1px solid " + theme.colors.darkLight,
+    borderRadius: theme.radius.xxl * 1.8,
+    borderCurve: "continuous",
+    border: "2.5px solid " + theme.colors.darkLight,
   },
   cameraIcon: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: -10,
     padding: 8,
-    borderRadius: 50,
-    backgroundColor: 'white',
-    border: "1px solid #ccc",
+    borderRadius: "50%",
+    backgroundColor: "white",
+    boxShadow: "0 8px 8px rgba(0, 0, 0, 0.2)",
+    border: "none",
     cursor: "pointer",
-  },  
-  
+  },
+
   icons: {
     display: "flex",
     flexDirection: "row",
@@ -166,31 +138,25 @@ const styles = {
     alignItems: "center",
     gap: 18,
   },
-  hint: {
-    fontSize: "14px",
-    color: "#666",
+
+  form: {
+    gap: 18,
+    marginTop: 20,
   },
- 
-  input : {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    border: "1px solid #ccc",
-    borderRadius: "10px",
-    padding: "10px 14px",
+  input: {
+    flexDirection: "row",
+    borderWidth: 0.4,
+    borderColor: theme.colors.text,
+    borderRadius: theme.radius.xxl,
+    borderCurve: "continous",
+    padding: 17,
+    paddingHoriozontal: 20,
+    gap: 15,
   },
-    bio: {
-      alignItems: "flex-start",
-      height: hp(15),
-      padding: "10px",
-    },
-    submitButton: {
-    backgroundColor: "#007bff",
-    color: "white",
-    padding: "12px",
-    borderRadius: "10px",
-    border: "none",
-    fontWeight: "bold",
-    cursor: "pointer",
+  bio: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    height: hp(15),
+    paddingVertical: 15,
   },
 };
