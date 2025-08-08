@@ -98,7 +98,6 @@ export const styles = {
     borderRadius: theme.radius?.xxl || "16px",
     paddingLeft: "18px",   // paddingHorizontal 대응
     paddingRight: "18px",
-    gap: "12px",
-  },
+    gap: "12px",  },
   
 };
