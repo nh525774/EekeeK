@@ -21,22 +21,15 @@ const NewPost = () => {
   const [title] = useState("");
   const { files, setFiles } = useFiles();
 
-  // ✅ EditMosaic에서 돌아왔을 때 해당 인덱스에 파일 교체
+  // ✅ EditMosaic에서 돌아왔을 때: state에 updatedFiles가 있으면 반영 후 state 초기화
   useEffect(() => {
-    const updatedFile = location.state?.updatedFile;
-    const index = location.state?.index;
-
-    if (updatedFile && typeof index === "number") {
-       setFiles(prev => {
-      const updated = [...prev];
-      updated[index] = updatedFile;
-      return updated;
-    });
+    const updated = location.state?.updatedFiles;
+    if (Array.isArray(updated)) {
+      setFiles(updated);
+      // state 비우기 (뒤로가기 시 중복 처리 방지)
+      navigate(location.pathname, { replace: true, state: {} });
     }
-    
-    navigate(location.pathname, { replace: true });
-}, [location.pathname, location.state, navigate, setFiles]);
-
+  }, [location.pathname, location.state, navigate, setFiles]);
 
   const user = auth.currentUser;
   if (!user) {
@@ -57,10 +50,8 @@ const NewPost = () => {
       alert("최대 4개의 파일만 업로드할 수 있습니다.");
       return;
     }
-
     const selectedLimited = selected.slice(0, remainingSlots);
     if (selectedLimited.length === 0) return;
-
     setFiles((prev) => [...prev, ...selectedLimited]);
   };
 
@@ -69,11 +60,12 @@ const NewPost = () => {
       alert("Please add content or attach a file.");
       return;
     }
-
+    const file = location.state?.file; // (이미지 모자이크 서버 경로가 있을 수 있음)
     const post = {
       title: title || "무제",
       content: bodyRef.current || "",
-      files: files,
+      file,
+      files,
     };
 
     setLoading(true);
@@ -91,24 +83,16 @@ const NewPost = () => {
 
   return (
     <ScreenWrapper bg="white">
-      <Header title="Create Post" />
-      <div
-        style={{ ...styles.loginContainer, gap: "28px", paddingTop: "32px" }}
-      >
+      <Header title="Create Post" showBack />
+      <div style={{ ...styles.loginContainer, gap: "28px", paddingTop: "32px" }}>
         {/* 프로필 */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <Avatar
-            uri={user?.photoURL}
-            size={hp(6.5)}
-            rounded={theme.radius.xl}
-          />
+          <Avatar uri={user?.photoURL} size={hp(6.5)} rounded={theme.radius.xl} />
           <div>
             <p style={{ fontWeight: theme.fonts.semibold }}>
               {user?.displayName || "User"}
             </p>
-            <p style={{ fontSize: hp(1.6), color: theme.colors.textLight }}>
-              Public
-            </p>
+            <p style={{ fontSize: hp(1.6), color: theme.colors.textLight }}>Public</p>
           </div>
         </div>
 
@@ -116,55 +100,64 @@ const NewPost = () => {
         {files.length > 0 && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {files.map((file, i) => {
-              if (!file) return null; // null/undefined 방어
-
-              const previewSrc = file instanceof Blob
-                ? URL.createObjectURL(file)
-                : file;
+              if (!file) return null;
+              const previewSrc = file instanceof Blob ? URL.createObjectURL(file) : file;
               return (
                 <div key={i} style={{ position: "relative", cursor: "pointer" }}>
-                <img
-                  src={previewSrc}
-                  alt={`preview-${i}`}
-                  style={{
-                    width: "100px",
-                    height: "100px",
-                    objectFit: "cover",
-                    borderRadius: "8px",
-                  }}
-                  onClick={() =>
-                    navigate("/editMosaic", {
-                      state: {
-                        file,
-                        index: i },
-                    })
-                  }
-                />
-                <button
-                  onClick={() => {
-                    const updated = files.filter((_, idx) => idx !== i);
-                    setFiles(updated);
-                  }}
-                  style={{
-                    position: "absolute",
-                    top: 4,
-                    right: 4,
-                    backgroundColor: "rgba(0,0,0,0.5)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "50%",
-                    cursor: "pointer",
-                    width: 20,
-                    height: 20,
-                    fontSize: 12,
-                  }}
-                >
-                  ×
-                </button>
-              </div>
+                  <img
+                    src={previewSrc}
+                    alt={`preview-${i}`}
+                    style={{
+                      width: "100px",
+                      height: "100px",
+                      objectFit: "cover",
+                      borderRadius: "8px",
+                    }}
+                    onClick={() =>
+                      navigate("/editMosaic", {
+                        state: { file, index: i },
+                      })
+                    }
+                  />
+                  <button
+                    onClick={() => {
+                      const updated = files.filter((_, idx) => idx !== i);
+                      setFiles(updated);
+                    }}
+                    style={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      backgroundColor: "rgba(0,0,0,0.5)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "50%",
+                      cursor: "pointer",
+                      width: 20,
+                      height: 20,
+                      fontSize: 12,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
               );
-              })}
-              </div>
+            })}
+          </div>
+        )}
+
+        {/* (이전 페이지에서 모자이크 처리 후 경로만 state로 온 경우) */}
+        {files.length === 0 && location.state?.file && (
+          <img
+            src={"http://localhost:5000" + location.state.file}
+            alt="mosaic-preview"
+            style={{
+              width: "100px",
+              height: "100px",
+              objectFit: "cover",
+              borderRadius: "8px",
+            }}
+          />
         )}
 
         {/* 글쓰기 에디터 */}
@@ -188,9 +181,7 @@ const NewPost = () => {
             onChange={onFileChange}
             style={{ display: "none" }}
           />
-          <span style={{ color: theme.colors.textLight }}>
-            Add to your post
-          </span>
+          <span style={{ color: theme.colors.textLight }}>Add to your post</span>
         </div>
 
         {/* 포스트 제출 */}

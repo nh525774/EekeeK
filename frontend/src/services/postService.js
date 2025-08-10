@@ -10,86 +10,59 @@ export const createOrUpdatePost = async (post) => {
 
     let imageUrls = [];
     let videoUrl = "";
-    const baseUrl = "http://localhost:5000"; 
+    const baseUrl = "http://localhost:5000";
 
-    if (typeof post.file === "string") {
-      // 🔹 모자이크된 static URL이 들어온 경우 > 전체 url로 변환
-      const isImage = post.file.endsWith(".jpg") || post.file.endsWith(".jpeg") || post.file.endsWith(".png");
-      const fullUrl = post.file.startsWith("http") ? post.file : baseUrl + post.file;
 
-      if (isImage) imageUrls.push(fullUrl);
-      else videoUrl = fullUrl;
+// (옵션) location.state.file 문자열도 반영
+if (post.file && typeof post.file === "string") {
+  const full = post.file.startsWith("http") ? post.file : baseUrl + post.file;
+  if (/\.(jpg|jpeg|png|gif|webp)$/i.test(full)) imageUrls.push(full);
+}
+
+// ✅ files 안의 문자열 URL 수집
+if (Array.isArray(post.files)) {
+  for (const f of post.files) {
+    if (typeof f === "string") {
+      const full = f.startsWith("http") ? f : baseUrl + f;
+      if (/\.(jpg|jpeg|png|gif|webp)$/i.test(full)) imageUrls.push(full);
     }
-    
-else if (post.files && Array.isArray(post.files)) {
-  const images = post.files.filter(file => file.type.includes("image"));
-  const videos = post.files.filter(file => file.type.includes("video"));
-
-  if (images.length > 0) {
-    const formData = new FormData();
-    for (const img of images) {
-      formData.append("image", img);
-    }
-    formData.append("selected", JSON.stringify([
-      "faces", "phones", "license_plates", "addresses", "location_sensitive"
-    ]));
-
-    const response = await axios.post(baseUrl + "/api/protect-mosaic", formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    if (!response.data?.urls) {
-      return { success: false, msg: "모자이크 처리 실패" };
-    }
-
-    imageUrls = response.data.urls.map(url => baseUrl + url);
   }
 
-  if (videos.length > 0) {
-    const formData = new FormData();
-    formData.append("video", videos[0]);
-    formData.append("selected", JSON.stringify([
-      "faces", "phones", "license_plates", "addresses", "location_sensitive"
-    ]));
-
-    const response = await axios.post(baseUrl + "/api/protect-video-mosaic", formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
+  // (필요한 경우에만) 비디오 처리 유지
+  const videoFile = post.files.find((f) => typeof f !== "string" && f?.type?.includes("video"));
+  if (videoFile) {
+    const vForm = new FormData();
+    vForm.append("video", videoFile);
+    vForm.append(
+      "selected",
+      JSON.stringify(["faces","phones","license_plates","addresses","location_sensitive"])
+    );
+    const vRes = await axios.post(baseUrl + "/api/protect-video-mosaic", vForm, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
     });
-
-    if (!response.data?.url) {
-      return { success: false, msg: "비디오 모자이크 실패" };
-    }
-
-    videoUrl = baseUrl + response.data.url;
+    if (!vRes.data?.url) return { success:false, msg:"비디오 모자이크 실패" };
+    videoUrl = baseUrl + vRes.data.url;
   }
 }
+
 
     const newPostData = {
       userId: user.uid,
       title: post.title || "기본 제목",
       content: post.content || "",
-      imageUrls,
+      imageUrls,   // <- 문자열 URL만 들어감
       videoUrl,
     };
 
-    const res = await axios.post("/api/posts",newPostData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }); // ← Express API endpoint
-    if (res.data.success) {
-      return { success: true, data: res.data };
-    } else {
-      return { success: false, msg: res.data.msg || "Post failed" };
-    }
+    const res = await axios.post("/api/posts", newPostData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    return res.data?.success
+      ? { success: true, data: res.data }
+      : { success: false, msg: res.data?.msg || "Post failed" };
   } catch (error) {
-    console.error("createPost error: ", error);
+    console.error("createPost error:", error);
     return { success: false, msg: "Could not create your post" };
   }
 };
