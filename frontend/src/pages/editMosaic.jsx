@@ -12,17 +12,65 @@ const EditMosaic = () => {
   const { file, index } = state || {};
   const { files, setFiles } = useFiles();
 
-  const [imageUrl] = useState(URL.createObjectURL(file));
+  useEffect(() => {
+    if (!file) navigate(-1);
+  }, [file, navigate]);
+
+  const baseUrl = "http://localhost:5000";
+
+  // --- blob URL 안전 관리 ---
+  const imgRef = useRef(null);
+  const blobUrlRef = useRef(null);
+  const [imageUrl, setImageUrl] = useState("");
+
+  const revokePrevBlobUrl = () => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+  };
+
+  // 파일이 Blob이면 미리보기 blob URL, 문자열이면 그대로 URL 미리보기
+  const setPreviewFromFile = (f) => {
+    revokePrevBlobUrl();
+    if (f instanceof Blob) {
+      const u = URL.createObjectURL(f);
+      blobUrlRef.current = u;
+      setImageUrl(u);
+    } else if (typeof f === "string") {
+      setImageUrl(f.startsWith("http") ? f : baseUrl + f);
+    } else {
+      setImageUrl("");
+    }
+  };
+
+  // 문자열 URL로 온 파일을 실제 Blob/File 로 바꿔주기
+  const toFileLike = async (f) => {
+    if (f instanceof Blob) return f;
+    if (typeof f === "string") {
+      const url = f.startsWith("http") ? f : baseUrl + f;
+      const res = await fetch(url);
+      const blob = await res.blob();
+      // 파일 필드로 보낼 수 있게 File 래핑
+      return new File([blob], `image.${blob.type.split("/")[1] || "jpg"}`, { type: blob.type });
+    }
+    return null;
+  };
+
+  // ---------- 상태 ----------
   const [analysis, setAnalysis] = useState({});
   const [selectedType, setSelectedType] = useState("faces");
   const [loading, setLoading] = useState(false);
   const [selectedBoxes, setSelectedBoxes] = useState([]);
-  const imgRef = useRef(null);
+
+  useEffect(() => {
+    setPreviewFromFile(file);
+    return () => revokePrevBlobUrl();
+    // file 변경시에만
+  }, [file]);
 
   const isValidBox = (box) =>
-    Array.isArray(box) &&
-    box.length === 4 &&
-    box.every((n) => typeof n === "number");
+    Array.isArray(box) && box.length === 4 && box.every((n) => typeof n === "number");
 
   const clampBox = (box, imgW, imgH) => {
     if (!isValidBox(box)) return [0, 0, 0, 0];
@@ -33,43 +81,40 @@ const EditMosaic = () => {
     h = Math.max(1, Math.min(h, imgH - y));
     return [x, y, w, h];
   };
-  const convertPolygonToBox = (polygon) => {
-  if (!Array.isArray(polygon) || polygon.length < 4) return [0, 0, 0, 0];
-  const xs = polygon.map(p => p.x);
-  const ys = polygon.map(p => p.y);
-  const x = Math.min(...xs);
-  const y = Math.min(...ys);
-  const w = Math.max(...xs) - x;
-  const h = Math.max(...ys) - y;
-  return [x, y, w, h];
-};
 
+  const convertPolygonToBox = (polygon) => {
+    if (!Array.isArray(polygon) || polygon.length < 4) return [0, 0, 0, 0];
+    const xs = polygon.map((p) => p.x);
+    const ys = polygon.map((p) => p.y);
+    const x = Math.min(...xs);
+    const y = Math.min(...ys);
+    const w = Math.max(...xs) - x;
+    const h = Math.max(...ys) - y;
+    return [x, y, w, h];
+  };
+
+  // --------- 분석 호출 (파일/URL 모두 대응) ----------
   useEffect(() => {
     const analyze = async () => {
-      const type = file.type.startsWith("video") ? "video" : "image";
-      const formData = new FormData();
-      formData.append(type, file);
-
-      const endpoint =
-        type === "video" ? "/api/protect-video-analyze" : "/api/protect-analyze";
-
       try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          body: formData,
-        });
+        const realFile = await toFileLike(file); // <- 핵심
+        if (!realFile) throw new Error("유효한 파일이 없습니다.");
+
+        const type = realFile.type?.startsWith("video") ? "video" : "image";
+        const formData = new FormData();
+        formData.append(type, realFile);
+        const endpoint = type === "video" ? "/api/protect-video-analyze" : "/api/protect-analyze";
+
+        const res = await fetch(endpoint, { method: "POST", body: formData });
         const data = await res.json();
 
         const wrapBoxes = (arr) =>
           (arr || []).filter(Boolean).map((b) => {
-            if (Array.isArray(b) && b.length === 4 && typeof b[0] === "number") {
-              return { box: b };
-            }
-            if (Array.isArray(b) && b.length === 4 && typeof b[0] === "object" && "x" in b[0]) {
-              return { box: convertPolygonToBox(b) }; // 꼭짓점 배열 처리
-            }
+            if (Array.isArray(b) && b.length === 4 && typeof b[0] === "number") return { box: b };
+            if (Array.isArray(b) && b.length === 4 && typeof b[0] === "object" && "x" in b[0])
+              return { box: convertPolygonToBox(b) };
             return { box: [0, 0, 0, 0] };
-  });
+          });
 
         const parsed =
           type === "video"
@@ -80,155 +125,152 @@ const EditMosaic = () => {
                 location_sensitive: wrapBoxes(data.location_sensitive),
               }
             : {
-                faces: (data.results?.[0]?.faces || []).map(f => ({ box: f.box })),
+                faces: (data.results?.[0]?.faces || []).map((f) => ({ box: f.box })),
                 phones: wrapBoxes(data.results?.[0]?.phones),
                 addresses: wrapBoxes(data.results?.[0]?.addresses),
                 location_sensitive: wrapBoxes(data.results?.[0]?.location_sensitive),
               };
 
-        console.group("📦 분석된 박스 목록");
-        Object.entries(parsed).forEach(([key, arr]) => {
-          console.log(`🟡 ${key}: ${arr.length}개`);
-          arr.forEach((item, i) => {
-            console.log(`  #${i + 1}:`, item.box);
-          });
-        });
-        console.groupEnd();
-
         setAnalysis(parsed);
       } catch (err) {
         console.error("❌ 분석 실패", err);
+        setAnalysis({});
         alert("이미지 분석에 실패했습니다.");
       }
     };
-
     if (file) analyze();
   }, [file]);
 
   const toggleSelection = (box) => {
-    const boxKey = JSON.stringify(box);
-    setSelectedBoxes((prev) => {
-      const exists = prev.some((b) => JSON.stringify(b) === boxKey);
-      return exists
-        ? prev.filter((b) => JSON.stringify(b) !== boxKey)
-        : [...prev, box];
-    });
+    const key = JSON.stringify(box);
+    setSelectedBoxes((prev) =>
+      prev.some((b) => JSON.stringify(b) === key)
+        ? prev.filter((b) => JSON.stringify(b) !== key)
+        : [...prev, box]
+    );
   };
 
   const handleMosaicApply = async () => {
-  const type = file.type.startsWith("video") ? "video" : "image";
-  const endpoint = type === "video" ? "/api/protect-video-mosaic" : "/api/protect-mosaic";
+    try {
+      const realFile = await toFileLike(file); // <- 문자열 URL도 처리
+      if (!realFile) {
+        alert("파일이 없습니다.");
+        return;
+      }
 
-  const formData = new FormData();
-  formData.append(type, file);
+      const type = realFile.type?.startsWith("video") ? "video" : "image";
+      const endpoint = type === "video" ? "/api/protect-video-mosaic" : "/api/protect-mosaic";
 
-  const selected = [selectedType]; // 지금 선택된 항목 1개만 적용
-  formData.append("selected", JSON.stringify(selected));
+      const formData = new FormData();
+      formData.append(type, realFile);
 
-  try {
-    setLoading(true);
-    const res = await fetch(endpoint, {
-      method: "POST",
-      body: formData,
-    });
+      const valid = selectedBoxes
+        .map((it) => (it && it.box ? it.box : it))
+        .filter((box) => Array.isArray(box) && box.length === 4 && box.every(Number.isFinite))
+        .map(([x, y, w, h]) => [Math.round(x), Math.round(y), Math.round(x + w), Math.round(y + h)]);
 
-    const text = await res.text();
-    const lastLine = text.trim().split("\n").pop();
-    const data = JSON.parse(lastLine);
-    const fileUrl = data.url || (data.urls && data.urls[0]);
-    if (!fileUrl) throw new Error("응답에 url이 없습니다");
+      if (valid.length === 0) {
+        alert("선택된 박스가 없습니다.");
+        return;
+      }
+      formData.append("selected", JSON.stringify(valid));
 
-    const blob = await (await fetch("http://localhost:5000" + fileUrl)).blob();
-    const mosaicFile = new File([blob], "mosaic_" + file.name, { type: blob.type });
+      setLoading(true);
+      const res = await fetch(endpoint, { method: "POST", body: formData });
+      const text = await res.text();
+      const lastLine = text.trim().split("\n").pop();
+      const data = JSON.parse(lastLine);
 
-    const updatedFiles = [...files];
-    updatedFiles[index] = mosaicFile;
-    setFiles(updatedFiles);
-    navigate(-1);
-  } catch (err) {
-    console.error("❌ 모자이크 처리 실패", err);
-    alert("모자이크 처리 중 오류가 발생했습니다.");
-  } finally {
-    setLoading(false);
-  }
-};
+      if (data.error) {
+        alert("모자이크 처리 실패: " + data.error);
+        return;
+      }
 
+      const fileUrl = data.url || (data.urls && data.urls[0]);
+      if (!fileUrl) {
+        alert("⚠️ 모자이크된 이미지 URL이 없습니다.");
+        return;
+      }
 
+      const fullUrl = fileUrl.startsWith("http") ? fileUrl : baseUrl + fileUrl;
+
+      // 미리보기도 새 URL로 적용(경고 억제용)
+      setPreviewFromFile(fullUrl);
+
+      const updated = [...files];
+      updated[index] = fullUrl; // 상태에는 URL 저장
+      setFiles(updated);
+
+      navigate(-1);
+    } catch (err) {
+      console.error("❌ 모자이크 처리 실패", err);
+      alert("모자이크 처리 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ScreenWrapper bg="white">
       <Header title="모자이크" showBack />
       <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: 20 }}>
-        <div style={{ position: "relative", alignSelf: "center", maxWidth: 400 }}>
-          <img
-            ref={imgRef}
-            src={imageUrl}
-            alt="preview"
-            style={{
-              width: "100%",
-              display: "block",
-              borderRadius: 12,
-              border: "1px solid #ccc",
-            }}
-          />
+        {imageUrl && (
+          <div style={{ position: "relative", alignSelf: "center", maxWidth: 400 }}>
+            <img
+              ref={imgRef}
+              src={imageUrl}
+              alt="preview"
+              style={{ width: "100%", display: "block", borderRadius: 12, border: "1px solid #ccc" }}
+            />
+            {(analysis[selectedType] || []).map((item, i) => {
+              const box = item.box;
+              if (!isValidBox(box)) return null;
 
-          {(analysis[selectedType] || []).map((item, i) => {
-            const box = item.box;
-            if (!isValidBox(box)) return null;
+              const imgEl = imgRef.current;
+              if (!imgEl) return null;
 
-            const imgElement = imgRef.current;
-            if (!imgElement) return null;
+              const scaleX = (imgEl.clientWidth || 1) / (imgEl.naturalWidth || 1);
+              const scaleY = (imgEl.clientHeight || 1) / (imgEl.naturalHeight || 1);
 
-            const naturalWidth = imgElement.naturalWidth || 1;
-            const naturalHeight = imgElement.naturalHeight || 1;
-            const displayWidth = imgElement.clientWidth || 1;
-            const displayHeight = imgElement.clientHeight || 1;
+              const [x, y, w, h] = clampBox(box, imgEl.naturalWidth || 1, imgEl.naturalHeight || 1);
+              const isSelected = selectedBoxes.some((b) => JSON.stringify(b) === JSON.stringify(box));
 
-            const scaleX = displayWidth / naturalWidth;
-            const scaleY = displayHeight / naturalHeight;
-
-            const [x, y, w, h] = clampBox(box, naturalWidth, naturalHeight);
-            const scaledX = x * scaleX;
-            const scaledY = y * scaleY;
-            const scaledW = Math.max(w * scaleX, 8);
-            const scaledH = Math.max(h * scaleY, 8);
-
-            return (
-              <div
-                key={`${selectedType}-${i}`}
-                onClick={() => toggleSelection(item.box)}
-                style={{
-                  position: "absolute",
-                  top: scaledY,
-                  left: scaledX,
-                  width: scaledW,
-                  height: scaledH,
-                  border: "2px dashed red",
-                  backgroundColor: "rgba(0,0,0,0.3)",
-                  cursor: "pointer",
-                  pointerEvents: "auto",
-                  borderRadius: 4,
-                }}
-              >
-                <span
+              return (
+                <div
+                  key={`${selectedType}-${i}`}
+                  onClick={() => toggleSelection(box)}
                   style={{
                     position: "absolute",
-                    top: -18,
-                    left: -6,
-                    backgroundColor: "red",
-                    color: "white",
-                    fontSize: 12,
-                    padding: "2px 6px",
-                    borderRadius: 12,
-                    fontWeight: "bold",
+                    left: x * scaleX,
+                    top: y * scaleY,
+                    width: Math.max(w * scaleX, 8),
+                    height: Math.max(h * scaleY, 8),
+                    border: "2px dashed red",
+                    backgroundColor: isSelected ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.3)",
+                    borderRadius: 4,
+                    cursor: "pointer",
                   }}
                 >
-                  {i + 1}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: -18,
+                      left: -6,
+                      backgroundColor: "red",
+                      color: "white",
+                      fontSize: 12,
+                      padding: "2px 6px",
+                      borderRadius: 12,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div
           style={{

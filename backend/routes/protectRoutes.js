@@ -57,8 +57,11 @@ router.post('/protect-analyze', upload.array('image', 4), (req, res) => {
 });
 });
 
+
 // /api/protect-mosaic
 router.post('/protect-mosaic', upload.array('image', 4), (req, res) => {
+  console.log("💬 서버에서 받은 selected 값:", req.body.selected);
+
   let selected;
   try {
     selected = JSON.parse(req.body.selected);
@@ -101,7 +104,7 @@ router.post('/protect-mosaic', upload.array('image', 4), (req, res) => {
     }
     completed++;
       if (completed === files.length) {
-        const validUrls = results.filter(Boolean);
+        const validUrls = results.filter(r => typeof r === "string" && r.startsWith("/static/"));
         if (validUrls.length === 0) {
           res.status(500).json({ error: "All mosaic processes failed" });
         } else {
