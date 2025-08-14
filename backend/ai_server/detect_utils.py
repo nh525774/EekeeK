@@ -12,6 +12,8 @@ import numpy as np
 from ultralytics import YOLO
 from ultralytics.cfg import get_cfg
 from facenet_pytorch import MTCNN
+from dotenv import load_dotenv
+
 
 # ✅ 로그 제거용 context manager
 @contextlib.contextmanager
@@ -27,11 +29,13 @@ def suppress_output():
             sys.stdout = old_stdout
             sys.stderr = old_stderr
 
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
 # ✅ 환경설정
-secret_key = 'RElNcktLcW5rakhXWVphV1NPZmtFS3lEaFBLTk5UUks='
-api_url = 'https://p3o6sbw2ma.apigw.ntruss.com/custom/v1/39564/51ee37fdd65c08539ab63f1680a9536314dc641489c1669d99a4fa86ece05f7d/general'
-naver_client_id = '6ZYK12BlEbyZVUKH_qi9'
-naver_client_secret = 'RQy2zgooVG'
+secret_key = os.environ.get('OCR_SECRET_KEY')
+api_url = os.environ.get('OCR_API_URL')
+naver_client_id = os.environ.get('NAVER_CLIENT_ID')
+naver_client_secret = os.environ.get('NAVER_CLIENT_SECRET')
 
 # ✅ YOLO 모델 로드 (로그 suppress 포함)
 def load_model():
