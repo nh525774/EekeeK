@@ -7,13 +7,16 @@ import Header from "../components/Header";
 import { theme } from "../constants/theme";
 import Icon from "../assets/icons";
 import { hp, wp } from "../helpers/common";
-import { auth } from "../api/firebase";
 import Avatar from "../components/Avatar";
 import axios from "axios";
 import { auth } from "../api/firebase";
 
 const Profile = () => {
   const navigate = useNavigate();
+
+  const [user, setUser] = useState(null); // {name,bio,image,followingCount,followerCount}
+  const [loading, setLoading] = useState(true);
+
   const onLogout = async () => {
     try {
       await auth.signOut();
@@ -26,20 +29,58 @@ const Profile = () => {
     }
   };
 
-  const user = {
-    name: "내 닉네임",
-    bio: "안녕하세요! 자기소개입니다.",
-    address: "",
-    image: "/defaultUser.png",
-    followerCount: 45,
-    followingCount: 30,
-  };
-
   const handleLogout = async () => {
     const confirmed = window.confirm("정말 로그아웃 하시겠습니까?");
     if (!confirmed) return;
     await onLogout();
   };
+
+  const fetchMe = async () => {
+    try {
+      setLoading(true);
+      const token = await auth.currentUser.getIdToken();
+      const { data } = await axios.get("/api/users/me", {
+        headers: { Authorization: `Bearer ${token}` },
+  });
+
+  // DB 필드 -> 화면 필드 매핑
+      setUser({
+        name: data?.username || "",
+        bio: data?.bio || "",
+        image: data?.profileImageUrl || "/defaultUser.png",
+        followerCount: Array.isArray(data?.followers) ? data.followers.length : 0,
+        followingCount: Array.isArray(data?.following) ? data.following.length : 0,
+      });
+    } catch (e) {
+      console.error("프로필 로드 실패:", e);
+      // 실패해도 화면은 비어 보이지 않게 기본값
+      setUser({
+        name: "",
+        bio: "",
+        image: "/defaultUser.png",
+        followerCount: 0,
+        followingCount: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMe();
+    // 편집 후 뒤로 오거나 포커스 돌아올 때 새로고침
+    const onFocus = () => fetchMe();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
+
+  if (loading || !user) {
+    return (
+      <ScreenWrapper bg="white">
+        <div style={{ padding: 16 }}>로딩 중...</div>
+      </ScreenWrapper>
+    );
+  }
 
   return (
     <ScreenWrapper bg="white">

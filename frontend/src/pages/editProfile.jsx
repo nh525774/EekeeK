@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ScreenWrapper from "../components/ScreenWrapper.jsx";
 import Header from "../components/Header.jsx";
 import { useAuth } from "../contexts/authContext.jsx";
@@ -11,44 +12,69 @@ import axios from "axios";
 import { auth } from "../api/firebase";
 
 const EditProfile = () => {
+  const navigate = useNavigate();
   const { user: currentUser, loading } = useAuth();
 
-  const [user, setUser] = useState({
+  const [form, setForm] = useState({
     name: "",
-    image: null,
+    image: "",
     bio: "",
   });
+  const [saving, setSaving] = useState(false);
+
+  // 1) 서버에서 내 프로필 불러와 폼 초기화
+  useEffect(() => {
+    const init = async () => {
+      try {
+        if (!auth.currentUser) return;
+        const token = await auth.currentUser.getIdToken();
+         const { data } = await axios.get("/api/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+      });
+      setForm({
+        name: data?.username ?? currentUser?.username ?? "",
+          image: data?.profileImageUrl ?? currentUser?.profileImageUrl ?? "",
+          bio: data?.bio ?? "",
+      });
+    } catch {
+      // DB에 아직 없으면 Auth 기본값만 넣어둠
+        setForm({
+          name: currentUser?.username ?? "",
+          image: currentUser?.profileImageUrl ?? "",
+          bio: "",
+        });
+    }
+  };
+init();
+  }, [currentUser]);
 
   const onSave = async () => {
   try {
+    setSaving(true);
     const token = await auth.currentUser.getIdToken();
+    const body = {
+        username: form.name,
+        bio: form.bio,
+        profileImageUrl: form.image || "",
+      };
     const res = await axios.patch(
-      "/api/users/me",
-      { username: user.name, bio: user.bio, profileImageUrl: user.image || "" },
+      "/api/users/me", body, 
       { headers: { Authorization: `Bearer ${token}` } }
     );
     console.log("saved:", res.data);
     alert("프로필이 저장됐습니다 ✅");
+    navigate("/profile");
   } catch (e) {
     console.error(e);
     alert("저장 실패 😥");
+  } finally {
+    setSaving(false);
   }
 };
 
-  useEffect(() => {
-    if (currentUser) {
-      setUser({
-        name: currentUser.name || "",
-        image: currentUser.image || "",
-        bio: currentUser.bio || "",
-      });
-    }
-  }, [currentUser]);
+if (loading) return <p>로딩 중...</p>;
 
-  if (loading) return <p>로딩 중...</p>;
-  if (!user) return <p>로그인이 필요합니다.</p>;
-
-  const imageSource = getUserImageSrc(user.image);
+  const imageSource = getUserImageSrc(form.image);
 
   const onPickImage = () => {
     console.log("이미지 선택 실행");
@@ -71,30 +97,32 @@ const EditProfile = () => {
             </div>
           </div>
         </div>
+        {/* 폼 */}
         <div style={styles.form}>
           <p style={{ fontSize: hp(1.5), color: theme.colors.text }}>
-            Please fill your frofile details
+            Please fill your profile details
           </p>
         </div>
         <Input
           icon={<Icon name="User"></Icon>}
           placeholder="Enter your name"
-          value={user.name}
-          onChange={(value) => setUser({ ...user, name: value })}
+          value={form.name}
+          onChange={(value) => setForm({ ...form, name: value })}
         />
         <Input
           icon={<Icon name="Edit"></Icon>}
           placeholder="Enter your bio"
-          value={user.bio}
+          value={form.bio}
           multiline={true}
-          onChange={(value) => setUser({ ...user, bio: value })}
+          onChange={(value) => setForm({ ...form, bio: value })}
         />
         <button
-  style={{ marginTop: 16, padding: "12px 16px", borderRadius: 12, background: theme.colors.hotpink, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer",  }}
+  style={{ marginTop: 16, padding: "12px 16px", borderRadius: 12, background: theme.colors.hotpink, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", opacity: saving ? 0.7 : 1, }}
+  disabled={saving}
   onClick={onSave}
 >
-  저장
-</button>
+  {saving ? "저장 중..." : "저장"}  
+        </button>
       </div>
     </ScreenWrapper>
   );
