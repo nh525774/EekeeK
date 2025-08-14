@@ -6,15 +6,34 @@ import { getUserImageSrc } from "../services/imageService.js";
 import Icon from "../assets/icons/index.jsx";
 import { theme } from "../constants/theme.js";
 import { hp, wp } from "../helpers/common.js";
+import Input from "../components/Input.jsx";
+import axios from "axios";
+import { auth } from "../api/firebase";
 
 const EditProfile = () => {
   const { user: currentUser, loading } = useAuth();
 
-  const { user, setUser } = useState({
+  const [user, setUser] = useState({
     name: "",
     image: null,
     bio: "",
   });
+
+  const onSave = async () => {
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const res = await axios.patch(
+      "/api/users/me",
+      { username: user.name, bio: user.bio, profileImageUrl: user.image || "" },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    console.log("saved:", res.data);
+    alert("프로필이 저장됐습니다 ✅");
+  } catch (e) {
+    console.error(e);
+    alert("저장 실패 😥");
+  }
+};
 
   useEffect(() => {
     if (currentUser) {
@@ -61,15 +80,21 @@ const EditProfile = () => {
           icon={<Icon name="User"></Icon>}
           placeholder="Enter your name"
           value={user.name}
-          onChangeText={(value) => setUser({ ...user, name: value })}
+          onChange={(value) => setUser({ ...user, name: value })}
         />
         <Input
           icon={<Icon name="Edit"></Icon>}
           placeholder="Enter your bio"
           value={user.bio}
           multiline={true}
-          onChangeText={(value) => setUser({ ...user, bio: value })}
+          onChange={(value) => setUser({ ...user, bio: value })}
         />
+        <button
+  style={{ marginTop: 16, padding: "12px 16px", borderRadius: 12, background: theme.colors.hotpink, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer",  }}
+  onClick={onSave}
+>
+  저장
+</button>
       </div>
     </ScreenWrapper>
   );
