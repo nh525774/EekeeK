@@ -1,6 +1,6 @@
 // src/pages/Profile.jsx
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ScreenWrapper from "../components/ScreenWrapper";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
@@ -9,6 +9,8 @@ import Icon from "../assets/icons";
 import { hp, wp } from "../helpers/common";
 import { auth } from "../api/firebase";
 import Avatar from "../components/Avatar";
+import axios from "axios";
+import { auth } from "../api/firebase";
 
 const Profile = () => {
   const navigate = useNavigate();
