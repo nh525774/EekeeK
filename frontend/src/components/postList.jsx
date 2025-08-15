@@ -4,18 +4,17 @@ import Loading from "./loading"; // 로딩 컴포넌트
 import { useNavigate } from "react-router-dom";
 
 const PostList = ({
-  posts,
-  currentUser,
-  isLoading,
-  loadMore,
-  hasMore,
+   posts,
+   currentUser,
+   isLoading,
+   loadMore,
+   hasMore,
+   meId,
 }) => {
   const bottomRef = useRef(null);
-
   const navigate = useNavigate();
 
-  useEffect(() => {
-  }, [posts, hasMore]);
+  useEffect(() => {}, [posts, hasMore]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -62,6 +61,7 @@ const PostList = ({
       item={safeItem}
       currentUser={currentUser}
       navigate={navigate}
+      meId={meId}
     />
   );
 })

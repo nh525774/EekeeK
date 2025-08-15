@@ -6,6 +6,7 @@ import Share from "../assets/icons/Share";
 import { useState } from "react";
 import { deletePostById } from "../services/postService";
 import { createPostLike } from "../services/postService";
+import { getUserImageSrc } from "../services/imageService";
 
 const styles = {
   container: {
@@ -76,7 +77,7 @@ const styles = {
   },
 };
 
-const PostCard = ({ item, currentUser, navigate, showMoreIcon = true }) => {
+const PostCard = ({ item, currentUser, navigate, showMoreIcon = true, meId }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [likeCount, setLikeCount] = useState(item?.likes?.length || 0);
   const [isLiked, setIsLiked] = useState(
@@ -84,9 +85,10 @@ const PostCard = ({ item, currentUser, navigate, showMoreIcon = true }) => {
 );
 
   // ✅ 기본값 처리
-  const isOwner = currentUser?.uid === item?.userId;
-  const userName = item?.user?.name || "User";
-  const userImage = item?.user?.image || "/defaultUser.png";
+  const isOwner = meId && item?.userId && String(item.userId) === String(meId);
+  const u = item?.user || {};
+  const userName = u.username || u.name || "User";
+  const userImage = getUserImageSrc(u.profileImageUrl || u.image || "/defaultUser.png");
   const postDate = item?.createdAt
     ? new Date(item.createdAt).toLocaleDateString()
     : "Now";

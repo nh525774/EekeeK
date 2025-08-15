@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ScreenWrapper from "../components/ScreenWrapper.jsx";
 import Header from "../components/Header.jsx";
@@ -13,14 +13,13 @@ import { auth } from "../api/firebase";
 
 const EditProfile = () => {
   const navigate = useNavigate();
-  const { user: currentUser, loading } = useAuth();
+  const { user: currentUser, loading, refreshUser } = useAuth();
 
-  const [form, setForm] = useState({
-    name: "",
-    image: "",
-    bio: "",
-  });
+  const [form, setForm] = useState({ name: "", image: "", bio: "" });
   const [saving, setSaving] = useState(false);
+
+  const [file, setFile] = useState(null);
+  const fileInputRef = useRef(null);
 
   // 1) 서버에서 내 프로필 불러와 폼 초기화
   useEffect(() => {
@@ -33,8 +32,8 @@ const EditProfile = () => {
       });
       setForm({
         name: data?.username ?? currentUser?.username ?? "",
-          image: data?.profileImageUrl ?? currentUser?.profileImageUrl ?? "",
-          bio: data?.bio ?? "",
+        image: data?.profileImageUrl ?? currentUser?.profileImageUrl ?? "",
+        bio: data?.bio ?? "",
       });
     } catch {
       // DB에 아직 없으면 Auth 기본값만 넣어둠
@@ -45,28 +44,50 @@ const EditProfile = () => {
         });
     }
   };
-init();
+  init();
   }, [currentUser]);
+
+const onPickImage = () => fileInputRef.current?.click();
+
+const onFileChange = (e) => {
+  const f = e.target.files?.[0];
+  if (!f) return;
+  setFile(f);
+  const preview = URL.createObjectURL(f);
+  setForm((p) => ({ ...p, image: preview })); // 미리보기
+};
 
   const onSave = async () => {
   try {
     setSaving(true);
     const token = await auth.currentUser.getIdToken();
-    const body = {
-        username: form.name,
-        bio: form.bio,
-        profileImageUrl: form.image || "",
-      };
-    const res = await axios.patch(
-      "/api/users/me", body, 
+
+    // 1) 이미지 먼저 업로드해서 URL 받기
+    let uploadedUrl = form.image;
+    if (file) {
+      const fd = new FormData();
+      fd.append("avatar", file);
+      const upRes = await axios.post("/api/users/me/avatar", fd, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      uploadedUrl = upRes.data.url;             // 서버가 돌려준 공개 URL
+      setForm((p) => ({ ...p, image: uploadedUrl })); // 상태도 HTTP URL로 갱신
+    }
+     // 2) 이름/바이오 + 이미지 URL PATCH
+    await axios.patch(
+      "/api/users/me",
+      { username: form.name, bio: form.bio, profileImageUrl: uploadedUrl },
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    console.log("saved:", res.data);
+    await refreshUser();
+
     alert("프로필이 저장됐습니다 ✅");
     navigate("/profile");
   } catch (e) {
     console.error(e);
-    alert("저장 실패 😥");
+    alert("저장 실패");
   } finally {
     setSaving(false);
   }
@@ -74,11 +95,10 @@ init();
 
 if (loading) return <p>로딩 중...</p>;
 
-  const imageSource = getUserImageSrc(form.image);
+  const imageSource = form.image?.startsWith("blob:") ? form.image : form.image?.startsWith("http")
+     ? form.image
+     : getUserImageSrc(form.image);
 
-  const onPickImage = () => {
-    console.log("이미지 선택 실행");
-  };
 
   return (
     <ScreenWrapper bg="white">
@@ -97,6 +117,13 @@ if (loading) return <p>로딩 중...</p>;
             </div>
           </div>
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={onFileChange}
+          style={{ display: "none" }}
+        />
         {/* 폼 */}
         <div style={styles.form}>
           <p style={{ fontSize: hp(1.5), color: theme.colors.text }}>

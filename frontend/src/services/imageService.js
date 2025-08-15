@@ -20,6 +20,9 @@ export const uploadFile = async (folderName, file) => {
   }
 };
 
-export function getUserImageSrc(user) {
-  return user?.image || "/defaultUser.png"; // ✅ public/defaultUser.png 기준
+export function getUserImageSrc(srcOrUser) {
+  const src = typeof srcOrUser === "string" ? srcOrUser : srcOrUser?.image;
+  if (!src) return "/defaultUser.png";
+  if (src.startsWith("http") || src.startsWith("blob:")) return src;
+  return src.startsWith("/") ? src : `/${src}`;
 }
