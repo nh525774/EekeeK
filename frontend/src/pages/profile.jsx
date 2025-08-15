@@ -10,6 +10,7 @@ import { hp, wp } from "../helpers/common";
 import Avatar from "../components/Avatar";
 import axios from "axios";
 import { auth } from "../api/firebase";
+import { getUserImageSrc } from "../services/imageService";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -17,23 +18,6 @@ const Profile = () => {
   const [user, setUser] = useState(null); // {name,bio,image,followingCount,followerCount}
   const [loading, setLoading] = useState(true);
 
-  const onLogout = async () => {
-    try {
-      await auth.signOut();
-      localStorage.removeItem("firebaseToken");
-      console.log("로그아웃 완료");
-      navigate("/");
-    } catch (error) {
-      console.error("로그아웃 실패:", error.message);
-      alert("로그아웃 중 오류가 발생했습니다: " + error.message);
-    }
-  };
-
-  const handleLogout = async () => {
-    const confirmed = window.confirm("정말 로그아웃 하시겠습니까?");
-    if (!confirmed) return;
-    await onLogout();
-  };
 
   const fetchMe = async () => {
     try {
@@ -73,6 +57,23 @@ const Profile = () => {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
+  const onLogout = async () => {
+    try {
+      await auth.signOut();
+      localStorage.removeItem("firebaseToken");
+      console.log("로그아웃 완료");
+      navigate("/");
+    } catch (error) {
+      console.error("로그아웃 실패:", error.message);
+      alert("로그아웃 중 오류가 발생했습니다: " + error.message);
+    }
+  };
+
+  const handleLogout = async () => {
+    const confirmed = window.confirm("정말 로그아웃 하시겠습니까?");
+    if (!confirmed) return;
+    await onLogout();
+  };
 
   if (loading || !user) {
     return (
@@ -90,6 +91,10 @@ const Profile = () => {
 };
 
 const UserHeader = ({ user, navigate, handleLogout }) => {
+  const displayImage = user?.image?.startsWith("http") || user?.image?.startsWith("blob:")
+  ? user.image
+  : getUserImageSrc(user?.image);
+
   return (
     <div style={{ flex: 1, backgroundColor: "white", padding: "16px" }}>
       <div className="mb-8">
@@ -111,7 +116,8 @@ const UserHeader = ({ user, navigate, handleLogout }) => {
       <div style={styles.centerBlock}>
         <div style={styles.avatarContainer}>
           <Avatar
-            uri={user?.image}
+          key={displayImage}
+            uri={displayImage}
             size={hp(12)}
             rounded={theme.radius.xxl * 1.4}
           />

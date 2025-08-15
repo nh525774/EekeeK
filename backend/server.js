@@ -15,6 +15,8 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
+app.set("publicBaseUrl", PUBLIC_BASE_URL);
 
 const postRoutes = require('./routes/postRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -28,8 +30,8 @@ mongoose.connect(process.env.MONGO_URI)
 
 app.use(cors()); //cors미들웨어 적용
 app.use(express.json());
-
-app.use('/uploads', express.static('uploads'));
+const path = require("path");
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/static", express.static(__dirname + "/static"));
 
 app.use('/api/search', searchRoutes);
@@ -81,5 +83,5 @@ app.post('/upload',firebaseAuth, upload.single('image'), async (req, res) => {
 
 
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on ${PUBLIC_BASE_URL}`);
 });

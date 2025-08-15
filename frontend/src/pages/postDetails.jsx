@@ -16,8 +16,22 @@ const PostDetails = () => {
   const [error, setError] = useState(null);
 
   const user = auth.currentUser;
+  const [meId, setMeId] = useState(null);
 
   useEffect(() => {
+
+    (async () => {
+      try {
+        if (!auth.currentUser) return;
+         const token = await auth.currentUser.getIdToken();
+       const { data } = await axios.get("/api/users/me", {
+         headers: { Authorization: `Bearer ${token}` },
+       });
+       setMeId(data?._id || null);
+     } catch (e) {
+       setMeId(null);
+     }
+   })();
 
     const fetchPost = async () => {
       try {
@@ -99,11 +113,15 @@ const PostDetails = () => {
     <div style ={{marginTop: 15 }}>
       {
         post?.comments?.length > 0 ? (
-          post.comments.map(comment => (
+          post.comments.map((comment, idx) => (
             <CommentItem
-              key={comment?._id}
+              key={comment?._id ?? `${comment.userId}-${comment.createdAt ?? ''}-${idx}`}
               item={comment}
-              canDelete = {user?.uid === comment.userId || user?.uid === post.userId }
+              canDelete={
+                // 댓글 작성자(Firebase UID) 또는 게시글 작성자(ObjectId)
+                (user?.uid && comment.userId === user.uid) ||
+                (meId && String(post.userId) === String(meId))
+              }
               onDelete = {handleDeleteComment}
          />
           ))

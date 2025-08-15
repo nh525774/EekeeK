@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
+import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import ScreenWrapper from "../components/ScreenWrapper";
 import Header from "../components/Header";
@@ -12,6 +13,7 @@ import Button from "../components/Button";
 import Icon from "../assets/icons";
 import { createOrUpdatePost } from "../services/postService";
 import { useFiles } from "../contexts/FilesContext";
+import { getUserImageSrc } from "../services/imageService";
 
 const NewPost = () => {
   const navigate = useNavigate();
@@ -32,6 +34,24 @@ const NewPost = () => {
   }, [location.pathname, location.state, navigate, setFiles]);
 
   const user = auth.currentUser;
+  const [me, setMe] = useState(null);
+
+  // 내 최신 프로필 불러오기 (MongoDB 기준)
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!auth.currentUser) return;
+        const token = await auth.currentUser.getIdToken();
+        const { data } = await axios.get("/api/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setMe(data); // data.username, data.profileImageUrl 존재
+      } catch (e) {
+        setMe(null);
+      }
+    })();
+  }, []);
+
   if (!user) {
     return (
       <ScreenWrapper bg="white">
@@ -87,10 +107,10 @@ const NewPost = () => {
       <div style={{ ...styles.loginContainer, gap: "28px", paddingTop: "32px" }}>
         {/* 프로필 */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <Avatar uri={user?.photoURL} size={hp(6.5)} rounded={theme.radius.xl} />
+          <Avatar uri={getUserImageSrc(me?.profileImageUrl || user?.photoURL || "/defaultUser.png")} size={hp(6.5)} rounded={theme.radius.xl} />
           <div>
             <p style={{ fontWeight: theme.fonts.semibold }}>
-              {user?.displayName || "User"}
+              {me?.username || user?.displayName || "User"}
             </p>
             <p style={{ fontSize: hp(1.6), color: theme.colors.textLight }}>Public</p>
           </div>

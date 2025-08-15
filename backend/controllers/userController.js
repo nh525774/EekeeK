@@ -1,9 +1,9 @@
-import User from "../models/User.js";
-import mongoose from "mongoose";
+// controllers/userController.js
+const mongoose = require("mongoose");
+const User = require("../models/User");
 
-
-//내 프로필 조회
-export const getMe = async (req, res) => {
+// 내 프로필 조회
+async function getMe(req, res) {
   try {
     const me = await User.findOne({ firebaseUid: req.firebaseUid });
     if (!me) return res.status(404).json({ message: "프로필 정보가 없습니다." });
@@ -11,13 +11,12 @@ export const getMe = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "프로필 조회 실패", error: err.message });
   }
-};
+}
 
 // 내 프로필 수정
-export const updateMe = async (req, res) => {
+async function updateMe(req, res) {
   try {
     const updates = {};
-
     if (typeof req.body.username === "string") updates.username = req.body.username;
     if (typeof req.body.bio === "string") updates.bio = req.body.bio;
     if (typeof req.body.profileImageUrl === "string") updates.profileImageUrl = req.body.profileImageUrl;
@@ -28,15 +27,15 @@ export const updateMe = async (req, res) => {
       { new: true }
     );
 
-    if (!updated) return res.status(404).json({ message: "유저 없음"});
+    if (!updated) return res.status(404).json({ message: "유저 없음" });
     res.json(updated);
   } catch (err) {
     res.status(500).json({ message: "프로필 수정 실패", error: err.message });
   }
-};
+}
 
-//최초 등록
-export const registerUser = async (req, res) => {
+// 최초 등록
+async function registerUser(req, res) {
   try {
     const exists = await User.exists({ firebaseUid: req.firebaseUid });
     if (exists) return res.status(400).json({ message: "이미 등록된 사용자입니다." });
@@ -53,44 +52,43 @@ export const registerUser = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "등록 실패", error: err.message });
   }
-};
+}
 
 // firebaseUid로 유저 조회
-export const getByFirebaseUid = async (req, res) => {
+async function getByFirebaseUid(req, res) {
   try {
     const user = await User.findOne({ firebaseUid: req.params.firebaseUid });
     if (!user) return res.status(404).json({ success: false, message: "사용자 없음" });
-    res.json({ succeess : true, data: user });
+    res.json({ success: true, data: user }); // ✅ 키 오타 수정
   } catch (err) {
     res.status(500).json({ success: false, message: "유저 조회 실패", error: err.message });
   }
-};
-
+}
 
 // 팔로우
-export const followUser = async (req, res) => {
+async function followUser(req, res) {
   try {
     const me = await User.findOne({ firebaseUid: req.firebaseUid });
     if (!me) return res.status(404).json({ message: "내 계정을 찾을 수 없습니다." });
-
 
     const targetId = req.params.id;
     if (!mongoose.isValidObjectId(targetId)) {
       return res.status(400).json({ message: "잘못된 대상 ID" });
     }
     if (me._id.equals(targetId)) {
-      return res.status(400).json({ message: "자기 자신은 팔로우할 수 없습니다." })
+      return res.status(400).json({ message: "자기 자신은 팔로우할 수 없습니다." });
     }
-     const target = await User.findById(targetId);
+
+    const target = await User.findById(targetId);
     if (!target) return res.status(404).json({ message: "대상 유저를 찾을 수 없습니다." });
 
-    if (me.following.some((id) => id.equals(targetId))) {
+    const already = me.following.some((id) => id.equals(targetId));
+    if (already) {
       return res.status(400).json({ message: "이미 팔로우 중입니다." });
     }
 
-    //원자적 업데이트
     await Promise.all([
-      User.findByIdAndUpdate(me._id, { $addToSet: { follosing: targetId } }),
+      User.findByIdAndUpdate(me._id, { $addToSet: { following: targetId } }),
       User.findByIdAndUpdate(targetId, { $addToSet: { followers: me._id } }),
     ]);
 
@@ -98,10 +96,10 @@ export const followUser = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+}
 
 // 언팔로우
-export const unfollowUser = async (req, res) => {
+async function unfollowUser(req, res) {
   try {
     const me = await User.findOne({ firebaseUid: req.firebaseUid });
     if (!me) return res.status(404).json({ message: "내 계정을 찾을 수 없습니다." });
@@ -116,7 +114,8 @@ export const unfollowUser = async (req, res) => {
       return res.status(404).json({ message: "대상 유저를 찾을 수 없습니다." });
     }
 
-    if (!me.following.includes(targetId)) {
+    const isFollowing = me.following.some((id) => id.equals(targetId)); 
+    if (!isFollowing) {
       return res.status(400).json({ message: "팔로우 상태가 아닙니다." });
     }
 
@@ -129,10 +128,10 @@ export const unfollowUser = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+}
 
 // 팔로우 여부 조회
-export const getFollowStatus = async (req, res) => {
+async function getFollowStatus(req, res) {
   try {
     const me = await User.findOne({ firebaseUid: req.firebaseUid });
     if (!me) return res.status(404).json({ message: "내 계정을 찾을 수 없습니다." });
@@ -143,12 +142,22 @@ export const getFollowStatus = async (req, res) => {
     }
 
     if (me._id.equals(targetId)) {
-      return res.status(200).json({ isFollowing: flase, isMe: true });
+      return res.status(200).json({ isFollowing: false, isMe: true }); 
     }
 
-    const isFollowing = me.following.some((id) => id.equals(targetId)); 
+    const isFollowing = me.following.some((id) => id.equals(targetId));
     res.status(200).json({ isFollowing, isMe: false });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+}
+
+module.exports = {
+  getMe,
+  updateMe,
+  registerUser,
+  getByFirebaseUid,
+  followUser,
+  unfollowUser,
+  getFollowStatus,
 };
