@@ -21,6 +21,7 @@ app.set("publicBaseUrl", PUBLIC_BASE_URL);
 const postRoutes = require('./routes/postRoutes');
 const userRoutes = require('./routes/userRoutes');
 
+
 const protectRoutes = require('./routes/protectRoutes');
 
 mongoose.connect(process.env.MONGO_URI)

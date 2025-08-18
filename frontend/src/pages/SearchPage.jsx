@@ -1,73 +1,127 @@
-import React, { useState } from "react";
-import Sidebar from "../components/Sidebar";
-import Button from "../components/Button";
+// pages/SearchPage.jsx
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { theme } from "../constants/theme";
 
 export default function SearchPage() {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
+  const nav = useNavigate();
+  const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState([]);
+  const inputRef = useRef(null);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    const qq = q.trim();
+    if (!qq) { setUsers([]); return; }
+    setLoading(true);
     try {
-      const res = await fetch(
-        `http://localhost:5000/api/users/search?q=${query}`
-      );
-      const data = await res.json();
-      setResults(data);
-    } catch (err) {
-      console.error("검색 실패", err);
+      const { data } = await axios.get("/api/search", {
+        params: { q: qq, type: "users", limit: 20 }
+      });
+      setUsers(data?.data?.users || []);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const goProfile = (u) => {
+    nav(`/profile/${u.username}`); // <- 너네 규칙에 맞게 수정 가능
+  };
+
   return (
-    <div className="min-h-screen bg-white">
-      <main className="flex">
-        {/* Sidebar (왼쪽 고정) */}
-        <aside className="h-screen w-24 border-r bg-blue shrink-0">
-          <Sidebar />
-        </aside>
+    <div style={{ maxWidth: 480, margin: "0 auto", padding: 16 }}>
+      <h1 style={{ fontWeight: theme.fonts.bold, fontSize: 20, marginBottom: 12 }}>검색</h1>
 
-        {/* 본문 영역 */}
-        <section className="flex-1">
-          {/* 상단 헤더 */}
-          <div className="border-b p-3">
-            <h1 className="text-2xl font-bold flex justify-center">검색</h1>
-          </div>
+      <form onSubmit={onSubmit} className="flex gap-2 mb-4">
+        <input
+          ref={inputRef}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="사용자 아이디를 입력하세요"
+          style={{
+            flex: 1,
+            border: `1px solid ${theme.colors.darkLight}`,
+            borderRadius: theme.radius.md,
+            padding: "10px 12px",
+            outline: "none",
+          }}
+        />
+        <button
+          type="submit"
+          style={{
+            border: "none",
+            borderRadius: theme.radius.md,
+            padding: "10px 14px",
+            background: theme.colors.primary,
+            color: "white",
+            cursor: "pointer",
+          }}
+        >
+          검색
+        </button>
+      </form>
 
-          {/* 중앙 본문 */}
-          <div className="flex justify-center">
-            <div className="w-full max-w-xl p-4 space-y-6">
-              {/* 🔍 검색창 */}
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  className="border px-4 py-2 rounded w-full"
-                  placeholder="사용자 이름을 입력하세요"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                />
-                <Button color="primary" onClick={handleSearch}>
-                  Search
-                </Button>
+      {loading && <p className="text-sm text-neutral-500">검색 중…</p>}
+      {!loading && users.length === 0 && q.trim() && (
+        <p style={{ color: theme.colors.textLight }}>일치하는 사용자가 없어요.</p>
+      )}
+
+      <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+        {users.map((u) => (
+          <li
+            key={u._id}
+            onClick={() => goProfile(u)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "10px 8px",
+              borderRadius: theme.radius.lg,
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = theme.colors.gray)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            <img
+              src={u.profileImageUrl || "/defaultUser.png"}
+              alt=""
+              width={40}
+              height={40}
+              style={{ borderRadius: "9999px", objectFit: "cover" }}
+            />
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontWeight: theme.fonts.semibold,
+                  color: theme.colors.textDark,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                @{u.username}
               </div>
-
-              {/* 🔽 검색 결과 */}
-              {results.map((user) => (
+              {u.bio && (
                 <div
-                  key={user.uid}
-                  className="bg-white border p-4 rounded shadow flex justify-between items-center"
+                  style={{
+                    fontSize: 12,
+                    color: theme.colors.textLight,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
                 >
-                  <span>{user.username}</span>
-                  <button className="text-blue-500 hover:underline">
-                    프로필 보기
-                  </button>
+                  {u.bio}
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        </section>
-      </main>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

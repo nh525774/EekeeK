@@ -13,10 +13,10 @@ export const AuthProvider = ({ children }) => {
   const fetchDbUser = async (fb) => {
     const token = await fb.getIdToken();
     try {
-      const res = await axios.get(`/api/users/firebase/${fb.uid}`, {
+      const res = await axios.get(`/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const db = res.data?.data || {};
+      const db = res.data || {};
       return {
         uid: fb.uid,
         email: fb.email,

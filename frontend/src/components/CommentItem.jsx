@@ -1,20 +1,28 @@
 import React from "react";
 import { theme } from "../constants/theme";
 import Avatar from "./Avatar";
+import { useNavigate } from "react-router-dom";
 
 const CommentItem = ({ item, canDelete = false, onDelete }) => {
-  const handleDelete = () => {
-    if (window.confirm("정말 삭제하시겠습니까?")) {
-      onDelete(item);
-    }
+  const navigate = useNavigate();
+  const profileId =
+    item?.userObjectId || item?.user?._id || item?.userId || item?.user?.id;
+  const goProfile = () => {
+    if (!profileId) return;
+    const isMongoId = /^[a-f\d]{24}$/i.test(String(profileId));
+    navigate(isMongoId ? `/profile/${profileId}` : `/users/${profileId}`);
   };
 
   return (
     <div style={styles.container}>
-      <Avatar uri={item?.userImage || "/defaultUSer.png"} />
+      <button onClick={goProfile} style={{ all: "unset", cursor: "pointer" }}>
+    <Avatar uri={item?.userImage || "/defaultUSer.png"} />
+  </button>
       <div style={styles.content}>
         <div style={styles.header}>
-          <span style={styles.name}>{item?.userName || "User"}</span>
+          <button onClick={goProfile} style={{ all: "unset", cursor: "pointer" }}>
+    <span style={styles.name}>{item?.userName || "User"}</span>
+  </button>
           <span style={styles.dateText}>
             {new Date(item?.createdAt).toLocaleDateString()}
           </span>

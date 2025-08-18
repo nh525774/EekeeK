@@ -8,7 +8,7 @@ const User = require("../models/User");
 
 const firebaseAuth = require('../middleware/firebaseAuth');
 const {
-  getMe, updateMe, registerUser, getByFirebaseUid, followUser, unfollowUser, getFollowStatus,
+  getMe, updateMe, registerUser, getUserById, followUser, unfollowUser, getFollowStatus,
 } = require("../controllers/userController");
 
 // --- Multer: 아바타 저장 위치/파일명 설정 ---
@@ -55,7 +55,7 @@ const uploadAvatar = (req, res, next) => {
 router.get("/me", firebaseAuth, getMe);
 router.patch("/me", firebaseAuth, updateMe);
 router.post("/", firebaseAuth, registerUser);
-router.get("/firebase/:firebaseUid", firebaseAuth, getByFirebaseUid);
+// router.get("/firebase/:firebaseUid", firebaseAuth, getByFirebaseUid);
 router.post("/me/avatar", firebaseAuth, uploadAvatar, async (req, res)=> {
   try {
       if (!req.file) return res.status(400).json({ message: "파일이 없습니다." });
@@ -76,8 +76,29 @@ router.post("/me/avatar", firebaseAuth, uploadAvatar, async (req, res)=> {
 });
 
 // 팔로우
-router.get("/:id/follow-status", firebaseAuth, getFollowStatus);
-router.post("/:id/follow", firebaseAuth, followUser);
-router.post("/:id/unfollow", firebaseAuth, unfollowUser);
+router.get('/:id', getUserById);
+router.get('/by-username/:username', async (req, res) => {
+  try {
+    const user = await User.findOne({ username: req.params.username })
+      .select('_id username bio profileImageUrl followers following');
+    if (!user) return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+    res.json({
+      _id: user._id,
+      username: user.username,
+      bio: user.bio,
+      profileImageUrl: user.profileImageUrl,
+      followerCount: user.followers.length,
+      followingCount: user.following.length,
+    });
+  } catch (e) {
+    res.status(500).json({ message: '서버 오류' });
+  }
+});
 
+// 팔로우 상태 조회 (로그인 필요)
+router.get('/:id/follow-status', firebaseAuth, getFollowStatus);
+
+// 팔로우 / 언팔로우 (로그인 필요)
+router.post('/:id/follow', firebaseAuth, followUser);
+router.post('/:id/unfollow', firebaseAuth, unfollowUser);
 module.exports = router;

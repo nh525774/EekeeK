@@ -4,6 +4,7 @@ import Heart from "../assets/icons/Heart";
 import Comment from "../assets/icons/Comment";
 import Share from "../assets/icons/Share";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { deletePostById } from "../services/postService";
 import { createPostLike } from "../services/postService";
 import { getUserImageSrc } from "../services/imageService";
@@ -78,6 +79,7 @@ const styles = {
 };
 
 const PostCard = ({ item, currentUser, navigate, showMoreIcon = true, meId }) => {
+  const nav = navigate || useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const [likeCount, setLikeCount] = useState(item?.likes?.length || 0);
   const [isLiked, setIsLiked] = useState(
@@ -85,13 +87,21 @@ const PostCard = ({ item, currentUser, navigate, showMoreIcon = true, meId }) =>
 );
 
   // ✅ 기본값 처리
-  const isOwner = meId && item?.userId && String(item.userId) === String(meId);
+  const ownerId = item?.userId || item?.user?._id || item?.user?.userId || item?.user?.id;
+  const isOwner = meId && ownerId && String(ownerId) === String(meId);
   const u = item?.user || {};
   const userName = u.username || u.name || "User";
   const userImage = getUserImageSrc(u.profileImageUrl || u.image || "/defaultUser.png");
   const postDate = item?.createdAt
     ? new Date(item.createdAt).toLocaleDateString()
     : "Now";
+
+  const goProfile = (e) => {
+    e.stopPropagation();
+    if (!ownerId) return;
+   const isMongoId = /^[a-f\d]{24}$/i.test(String(ownerId));
+    nav(isMongoId ? `/profile/${ownerId}` : `/users/${ownerId}`);
+  };
 
 const openPostDetails = () => {
   if (navigate && item?._id) {
@@ -238,11 +248,13 @@ const handleLike = async (e) => {
       {/* header */}
       <div style={styles.header}>
         <div style={styles.userInfo}>
-          <img src={userImage} alt="avatar" style={styles.avatar} />
-          <div>
-            <p style={styles.username}>{userName}</p>
-            <p style={styles.postTime}>{postDate}</p>
-          </div>
+          <button onClick={goProfile} style={{ all: "unset", cursor: "pointer" }}>
+            <img src={userImage} alt="avatar" style={styles.avatar} />
+            </button>
+          <button onClick={goProfile} style={{ all: "unset", cursor: "pointer" }}>
+        <p style={styles.username}>{userName}</p>
+        <p style={styles.postTime}>{postDate}</p>
+      </button>
         </div>
         {isOwner && showMoreIcon && (
           <div style={{ position: "relative" }}>

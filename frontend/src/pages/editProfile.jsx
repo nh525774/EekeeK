@@ -166,23 +166,23 @@ const styles = {
   contentWrapper: {
     flex: 1,
     display: "flex",
-    justifyContent: "center", // 🔥 세로 중앙
-    alignItems: "center", // 🔥 가로 중앙
-    minHeight: "100vh", // 화면 꽉 차게
+    justifyContent: "center", 
+    alignItems: "center", 
+    minHeight: "100vh", 
   },
   container: {
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    alignItems: "center", // 가로 중앙
-    justifyContent: "center", // 세로 중앙
-    height: "100%", // 세로 높이 확보
+    alignItems: "center", 
+    justifyContent: "center",
+    height: "100%", 
     paddingHorizontal: wp(4),
   },
   centerBlock: {
     display: "flex",
     flexDirection: "column",
-    alignItems: "center", // 🔥 중앙정렬
+    alignItems: "center",
     marginTop: hp(4),
     gap: 8,
   },
