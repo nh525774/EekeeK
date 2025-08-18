@@ -3,13 +3,13 @@ import { FilesProvider } from "./contexts/FilesContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/home";
-import SearchPage from "./pages/SearchPage";
 import NewPost from "./pages/newPost";
 import NotificationPage from "./pages/NotificationPage";
-import Profile from "./pages/profile";
-import EditProfile from "./pages/EditProfile";
+import Profile from "./pages/Profile";
+import EditProfile from "./pages/editProfile";
 import EditMosaic from "./pages/editMosaic";
 import PostDetails from "./pages/postDetails";
+import SearchPage from "./pages/SearchPage";
 
 function App() {
   return (
@@ -18,16 +18,18 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/Home" element={<Home />} />
-          <Route path="/SearchPage" element={<SearchPage />} />
-          <Route path="/UploadPage" element={<NewPost />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/uploadPage" element={<NewPost />} />
           <Route path="/editMosaic" element={<EditMosaic />} />
           <Route path="/notifications" element={<NotificationPage />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/:id" element={<Profile />} />{" "}
           {/* 다른 유저 프로필 */}
-          <Route path="/EditProfile" element={<EditProfile />} />
+          <Route path="/profile/:username" element={<Profile />} />
+          <Route path="/editProfile" element={<EditProfile />} />
+          <Route path="/post/:id" element={<PostDetails />} />
           <Route path="/postDetail" element={<PostDetails />} />
+          <Route path="/postDetails" element={<PostDetails />} />
         </Routes>
       </BrowserRouter>
     </FilesProvider>

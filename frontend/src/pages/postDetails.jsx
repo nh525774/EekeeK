@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import PostCard from "../components/PostCard";
 import { auth } from "../api/firebase";
@@ -7,9 +7,10 @@ import CommentItem from "../components/CommentItem";
 import { createComment, removeComment } from "../services/postService";
 
 const PostDetails = () => {
+  const { id: pathId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const postId = searchParams.get("postId");
+  const postId = pathId || searchParams.get("postId");
 
   const [post, setPost] = useState(null);
   const [commentText, setCommentText] = useState("");
@@ -96,7 +97,7 @@ const PostDetails = () => {
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: 20 }}>
-      <PostCard item={post} currentUser={user} showMoreIcon={false} />
+      <PostCard item={post} currentUser={user} showMoreIcon={false} navigate={navigate} />
     {/* 댓글 입력 */}
     <div style={{ marginTop: 20, display: "flex", gap: "10px" }}>
       <input

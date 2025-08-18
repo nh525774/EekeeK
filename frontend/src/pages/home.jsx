@@ -102,6 +102,9 @@ const fetchMe = useCallback(async () => {
         <div style={styles.header}>
           <p style={styles.title}>EekeeK</p>
           <div style={styles.icons}>
+            <span onClick={() => navigate("/search")} style={{ cursor: "pointer" }}>
+              <Icon name="Search" size={hp(3.2)} strokeWidth={2} color={theme.colors.text} />
+            </span>
             <span onClick={() => navigate("/notifications")} style={{ cursor: "pointer" }}>
               <Icon name="Heart" size={hp(3.2)} strokeWidth={2} color={theme.colors.text} />
             </span>
