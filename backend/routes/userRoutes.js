@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
 const fs = require("fs");
@@ -6,7 +6,7 @@ const path = require("path");
 const multer = require("multer");
 const User = require("../models/User");
 
-const firebaseAuth = require('../middleware/firebaseAuth');
+const firebaseAuth = require("../middleware/firebaseAuth");
 const {
   getMe, updateMe, registerUser, getUserById, followUser, unfollowUser, getFollowStatus,
 } = require("../controllers/userController");
@@ -55,33 +55,51 @@ const uploadAvatar = (req, res, next) => {
 router.get("/me", firebaseAuth, getMe);
 router.patch("/me", firebaseAuth, updateMe);
 router.post("/", firebaseAuth, registerUser);
-// router.get("/firebase/:firebaseUid", firebaseAuth, getByFirebaseUid);
-router.post("/me/avatar", firebaseAuth, uploadAvatar, async (req, res)=> {
+
+// 아바타 업로드 — 없으면 자동 생성 후 저장
+router.post("/me/avatar", firebaseAuth, uploadAvatar, async (req, res) => {
   try {
-      if (!req.file) return res.status(400).json({ message: "파일이 없습니다." });
+    if (!req.file) return res.status(400).json({ message: "파일이 없습니다." });
 
-      const me = await User.findOne({ firebaseUid: req.firebaseUid });
-      if (!me) return res.status(404).json({ message: "내 계정을 찾을 수 없습니다." });
-      
-      const baseUrl = req.app.get("publicBaseUrl") || `http://localhost:${process.env.PORT || 5000}`;
-      const publicUrl = `${baseUrl}/uploads/avatars/${req.file.filename}`;
-      me.profileImageUrl = publicUrl;
-      await me.save();
-
-      res.json({ url: publicUrl, user: me });
-    } catch (e) {
-      console.error("아바타 업로드 실패:", e);
-      res.status(500).json({ message: "아바타 업로드 실패", error: e.message });
+    let me = await User.findOne({ firebaseUid: req.firebaseUid });
+    if (!me) {
+      // 최초 업로드로 프로필 생성
+      const seed = (req.firebaseEmail || "user").split("@")[0];
+      let cand = seed.replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 20) || "user";
+      let n = 0;
+      while (await User.exists({ username: cand })) {
+        n += 1;
+        cand = `${seed}${n}`.replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 24);
+      }
+      me = await User.create({
+        firebaseUid: req.firebaseUid,
+        username: cand,
+        bio: "",
+        profileImageUrl: "",
+        followers: [],
+        following: [],
+      });
     }
+
+    const baseUrl = req.app.get("publicBaseUrl") || `http://localhost:${process.env.PORT || 5000}`;
+    const publicUrl = `${baseUrl}/uploads/avatars/${req.file.filename}`;
+    me.profileImageUrl = publicUrl;
+    await me.save();
+
+    res.json({ url: publicUrl, user: me });
+  } catch (e) {
+    console.error("아바타 업로드 실패:", e);
+    res.status(500).json({ message: "아바타 업로드 실패", error: e.message });
+  }
 });
 
-// 팔로우
-router.get('/:id', getUserById);
-router.get('/by-username/:username', async (req, res) => {
+// 조회/팔로우
+router.get("/:id", getUserById);
+router.get("/by-username/:username", async (req, res) => {
   try {
     const user = await User.findOne({ username: req.params.username })
-      .select('_id username bio profileImageUrl followers following');
-    if (!user) return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+      .select("_id username bio profileImageUrl followers following");
+    if (!user) return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
     res.json({
       _id: user._id,
       username: user.username,
@@ -91,14 +109,12 @@ router.get('/by-username/:username', async (req, res) => {
       followingCount: user.following.length,
     });
   } catch (e) {
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: "서버 오류" });
   }
 });
 
-// 팔로우 상태 조회 (로그인 필요)
-router.get('/:id/follow-status', firebaseAuth, getFollowStatus);
+router.get("/:id/follow-status", firebaseAuth, getFollowStatus);
+router.post("/:id/follow", firebaseAuth, followUser);
+router.post("/:id/unfollow", firebaseAuth, unfollowUser);
 
-// 팔로우 / 언팔로우 (로그인 필요)
-router.post('/:id/follow', firebaseAuth, followUser);
-router.post('/:id/unfollow', firebaseAuth, unfollowUser);
 module.exports = router;
