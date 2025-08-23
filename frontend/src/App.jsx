@@ -4,7 +4,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/home";
 import NewPost from "./pages/newPost";
-import NotificationPage from "./pages/NotificationPage";
+import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/editProfile";
 import EditMosaic from "./pages/editMosaic";
@@ -22,7 +22,7 @@ function App() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/uploadPage" element={<NewPost />} />
           <Route path="/editMosaic" element={<EditMosaic />} />
-          <Route path="/notifications" element={<NotificationPage />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/profile" element={<Profile />} />
           {/* 다른 유저 프로필 */}
           <Route path="/profile/:username" element={<Profile />} />
