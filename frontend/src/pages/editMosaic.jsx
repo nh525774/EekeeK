@@ -52,7 +52,9 @@ const EditMosaic = () => {
       const res = await fetch(url);
       const blob = await res.blob();
       // 파일 필드로 보낼 수 있게 File 래핑
-      return new File([blob], `image.${blob.type.split("/")[1] || "jpg"}`, { type: blob.type });
+      return new File([blob], `image.${blob.type.split("/")[1] || "jpg"}`, {
+        type: blob.type,
+      });
     }
     return null;
   };
@@ -70,7 +72,9 @@ const EditMosaic = () => {
   }, [file]);
 
   const isValidBox = (box) =>
-    Array.isArray(box) && box.length === 4 && box.every((n) => typeof n === "number");
+    Array.isArray(box) &&
+    box.length === 4 &&
+    box.every((n) => typeof n === "number");
 
   const clampBox = (box, imgW, imgH) => {
     if (!isValidBox(box)) return [0, 0, 0, 0];
@@ -103,15 +107,24 @@ const EditMosaic = () => {
         const type = realFile.type?.startsWith("video") ? "video" : "image";
         const formData = new FormData();
         formData.append(type, realFile);
-        const endpoint = type === "video" ? "/api/protect-video-analyze" : "/api/protect-analyze";
+        const endpoint =
+          type === "video"
+            ? "/api/protect-video-analyze"
+            : "/api/protect-analyze";
 
         const res = await fetch(endpoint, { method: "POST", body: formData });
         const data = await res.json();
 
         const wrapBoxes = (arr) =>
           (arr || []).filter(Boolean).map((b) => {
-            if (Array.isArray(b) && b.length === 4 && typeof b[0] === "number") return { box: b };
-            if (Array.isArray(b) && b.length === 4 && typeof b[0] === "object" && "x" in b[0])
+            if (Array.isArray(b) && b.length === 4 && typeof b[0] === "number")
+              return { box: b };
+            if (
+              Array.isArray(b) &&
+              b.length === 4 &&
+              typeof b[0] === "object" &&
+              "x" in b[0]
+            )
               return { box: convertPolygonToBox(b) };
             return { box: [0, 0, 0, 0] };
           });
@@ -125,10 +138,14 @@ const EditMosaic = () => {
                 location_sensitive: wrapBoxes(data.location_sensitive),
               }
             : {
-                faces: (data.results?.[0]?.faces || []).map((f) => ({ box: f.box })),
+                faces: (data.results?.[0]?.faces || []).map((f) => ({
+                  box: f.box,
+                })),
                 phones: wrapBoxes(data.results?.[0]?.phones),
                 addresses: wrapBoxes(data.results?.[0]?.addresses),
-                location_sensitive: wrapBoxes(data.results?.[0]?.location_sensitive),
+                location_sensitive: wrapBoxes(
+                  data.results?.[0]?.location_sensitive
+                ),
               };
 
         setAnalysis(parsed);
@@ -159,15 +176,24 @@ const EditMosaic = () => {
       }
 
       const type = realFile.type?.startsWith("video") ? "video" : "image";
-      const endpoint = type === "video" ? "/api/protect-video-mosaic" : "/api/protect-mosaic";
+      const endpoint =
+        type === "video" ? "/api/protect-video-mosaic" : "/api/protect-mosaic";
 
       const formData = new FormData();
       formData.append(type, realFile);
 
       const valid = selectedBoxes
         .map((it) => (it && it.box ? it.box : it))
-        .filter((box) => Array.isArray(box) && box.length === 4 && box.every(Number.isFinite))
-        .map(([x, y, w, h]) => [Math.round(x), Math.round(y), Math.round(x + w), Math.round(y + h)]);
+        .filter(
+          (box) =>
+            Array.isArray(box) && box.length === 4 && box.every(Number.isFinite)
+        )
+        .map(([x, y, w, h]) => [
+          Math.round(x),
+          Math.round(y),
+          Math.round(x + w),
+          Math.round(y + h),
+        ]);
 
       if (valid.length === 0) {
         alert("선택된 박스가 없습니다.");
@@ -213,14 +239,28 @@ const EditMosaic = () => {
   return (
     <ScreenWrapper bg="white">
       <Header title="모자이크" showBack />
-      <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: 20 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 20,
+          padding: 20,
+        }}
+      >
         {imageUrl && (
-          <div style={{ position: "relative", alignSelf: "center", maxWidth: 400 }}>
+          <div
+            style={{ position: "relative", alignSelf: "center", maxWidth: 400 }}
+          >
             <img
               ref={imgRef}
               src={imageUrl}
               alt="preview"
-              style={{ width: "100%", display: "block", borderRadius: 12, border: "1px solid #ccc" }}
+              style={{
+                width: "100%",
+                display: "block",
+                borderRadius: 12,
+                border: "1px solid #ccc",
+              }}
             />
             {(analysis[selectedType] || []).map((item, i) => {
               const box = item.box;
@@ -229,11 +269,19 @@ const EditMosaic = () => {
               const imgEl = imgRef.current;
               if (!imgEl) return null;
 
-              const scaleX = (imgEl.clientWidth || 1) / (imgEl.naturalWidth || 1);
-              const scaleY = (imgEl.clientHeight || 1) / (imgEl.naturalHeight || 1);
+              const scaleX =
+                (imgEl.clientWidth || 1) / (imgEl.naturalWidth || 1);
+              const scaleY =
+                (imgEl.clientHeight || 1) / (imgEl.naturalHeight || 1);
 
-              const [x, y, w, h] = clampBox(box, imgEl.naturalWidth || 1, imgEl.naturalHeight || 1);
-              const isSelected = selectedBoxes.some((b) => JSON.stringify(b) === JSON.stringify(box));
+              const [x, y, w, h] = clampBox(
+                box,
+                imgEl.naturalWidth || 1,
+                imgEl.naturalHeight || 1
+              );
+              const isSelected = selectedBoxes.some(
+                (b) => JSON.stringify(b) === JSON.stringify(box)
+              );
 
               return (
                 <div
@@ -246,7 +294,9 @@ const EditMosaic = () => {
                     width: Math.max(w * scaleX, 8),
                     height: Math.max(h * scaleY, 8),
                     border: "2px dashed red",
-                    backgroundColor: isSelected ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.3)",
+                    backgroundColor: isSelected
+                      ? "rgba(0,0,0,0.5)"
+                      : "rgba(0,0,0,0.3)",
                     borderRadius: 4,
                     cursor: "pointer",
                   }}
@@ -281,32 +331,40 @@ const EditMosaic = () => {
             paddingTop: 8,
           }}
         >
-          {["faces", "phones", "addresses", "location_sensitive"].map((type) => (
-            <button
-              key={type}
-              onClick={() => setSelectedType(type)}
-              style={{
-                padding: "8px 12px",
-                flex: 1,
-                backgroundColor: selectedType === type ? theme.colors.primary : "#f0f0f0",
-                color: selectedType === type ? "white" : theme.colors.text,
-                fontWeight: selectedType === type ? "bold" : "normal",
-                border: "none",
-                borderRadius: 6,
-                margin: "0 4px",
-                cursor: "pointer",
-              }}
-            >
-              {type === "faces" && "얼굴"}
-              {type === "phones" && "전화번호"}
-              {type === "addresses" && "주소"}
-              {type === "location_sensitive" && "위치"}
-            </button>
-          ))}
+          {["faces", "phones", "addresses", "location_sensitive"].map(
+            (type) => (
+              <button
+                key={type}
+                onClick={() => setSelectedType(type)}
+                style={{
+                  padding: "8px 12px",
+                  flex: 1,
+                  backgroundColor:
+                    selectedType === type ? theme.colors.primary : "#f0f0f0",
+                  color: selectedType === type ? "white" : theme.colors.text,
+                  fontWeight: selectedType === type ? "bold" : "normal",
+                  border: "none",
+                  borderRadius: 6,
+                  margin: "0 4px",
+                  cursor: "pointer",
+                  boxShadow: "0 5px 4px rgba(0, 0, 0, 0.2)",
+                }}
+              >
+                {type === "faces" && "얼굴"}
+                {type === "phones" && "전화번호"}
+                {type === "addresses" && "주소"}
+                {type === "location_sensitive" && "위치"}
+              </button>
+            )
+          )}
         </div>
 
         <div style={{ alignSelf: "center", marginTop: 20 }}>
-          <Button title="모자이크 적용" onPress={handleMosaicApply} loading={loading} />
+          <Button
+            title="모자이크 적용"
+            onPress={handleMosaicApply}
+            loading={loading}
+          />
         </div>
       </div>
     </ScreenWrapper>

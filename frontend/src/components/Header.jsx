@@ -23,7 +23,7 @@ const styles = {
     justifyContent: "space-between",
     gap: "12px",
     padding: "12px 20px",
-    backgroundColor: theme.colors?.background || "#f9fafb",
+    backgroundColor: theme.colors?.background || "#c0d86e",
     borderBottom: "1px solid #e5e7eb",
     height: "60px",
   },

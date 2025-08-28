@@ -25,7 +25,7 @@ const Home = () => {
   const [me, setMe] = useState(null);
 
   // 최신 내 프로필 불러오기
-const fetchMe = useCallback(async () => {
+  const fetchMe = useCallback(async () => {
     try {
       if (!auth.currentUser) return;
       const token = await auth.currentUser.getIdToken();
@@ -33,7 +33,7 @@ const fetchMe = useCallback(async () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMe({
-        id:   data?._id,  
+        id: data?._id,
         name: data?.username || "",
         image: data?.profileImageUrl || "",
       });
@@ -81,12 +81,11 @@ const fetchMe = useCallback(async () => {
   const getPosts = async () => {
     if (!hasMore || loading) return;
     const next = limit + 5;
-    await load(next);   // 전체를 최신 limit로 다시 세팅 (중복 방지)
+    await load(next); // 전체를 최신 limit로 다시 세팅 (중복 방지)
     limit = next;
   };
 
-  const headerName =
-    me?.name || authUser?.username || authUser?.name || "User";
+  const headerName = me?.name || authUser?.username || authUser?.name || "User";
 
   const avatarUrl = getUserImageSrc(
     me?.image ||
@@ -102,18 +101,45 @@ const fetchMe = useCallback(async () => {
         <div style={styles.header}>
           <p style={styles.title}>EekeeK</p>
           <div style={styles.icons}>
-            <span onClick={() => navigate("/search")} style={{ cursor: "pointer" }}>
-              <Icon name="Search" size={hp(3.2)} strokeWidth={2} color={theme.colors.text} />
+            <span
+              onClick={() => navigate("/search")}
+              style={{ cursor: "pointer" }}
+            >
+              <Icon
+                name="Search"
+                size={hp(3.2)}
+                strokeWidth={2}
+                color={theme.colors.text}
+              />
             </span>
-            <span onClick={() => navigate("/notifications")} style={{ cursor: "pointer" }}>
-              <Icon name="Heart" size={hp(3.2)} strokeWidth={2} color={theme.colors.text} />
+            <span
+              onClick={() => navigate("/notifications")}
+              style={{ cursor: "pointer" }}
+            >
+              <Icon
+                name="Heart"
+                size={hp(3.2)}
+                strokeWidth={2}
+                color={theme.colors.text}
+              />
             </span>
-            <span onClick={() => navigate("/uploadPage")} style={{ cursor: "pointer" }}>
-              <Icon name="Plus" size={hp(3.2)} strokeWidth={2} color={theme.colors.text} />
+            <span
+              onClick={() => navigate("/uploadPage")}
+              style={{ cursor: "pointer" }}
+            >
+              <Icon
+                name="Plus"
+                size={hp(3.2)}
+                strokeWidth={2}
+                color={theme.colors.text}
+              />
             </span>
-            <span onClick={() => navigate("/profile")} style={{ cursor: "pointer" }}>
+            <span
+              onClick={() => navigate("/profile")}
+              style={{ cursor: "pointer" }}
+            >
               <img
-              key={avatarUrl}
+                key={avatarUrl}
                 src={avatarUrl}
                 alt="User avatar"
                 style={{
@@ -157,8 +183,11 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 10,
-    marginLeft: wp(4),
-    marginRight: wp(4),
+    //marginLeft: wp(4),
+    //marginRight: wp(4),
+    backgroundColor: theme.colors.primary,
+    paddingLeft: wp(4), // ✅ 왼쪽 여백
+    paddingRight: wp(4),
   },
   title: {
     color: theme.colors?.text || "#000",
@@ -173,4 +202,3 @@ const styles = {
     gap: 18,
   },
 };
-

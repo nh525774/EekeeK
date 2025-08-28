@@ -27,78 +27,79 @@ const EditProfile = () => {
       try {
         if (!auth.currentUser) return;
         const token = await auth.currentUser.getIdToken();
-         const { data } = await axios.get("/api/users/me", {
+        const { data } = await axios.get("/api/users/me", {
           headers: { Authorization: `Bearer ${token}` },
-      });
-      setForm({
-        name: data?.username ?? currentUser?.username ?? "",
-        image: data?.profileImageUrl ?? currentUser?.profileImageUrl ?? "",
-        bio: data?.bio ?? "",
-      });
-    } catch {
-      // DB에 아직 없으면 Auth 기본값만 넣어둠
+        });
+        setForm({
+          name: data?.username ?? currentUser?.username ?? "",
+          image: data?.profileImageUrl ?? currentUser?.profileImageUrl ?? "",
+          bio: data?.bio ?? "",
+        });
+      } catch {
+        // DB에 아직 없으면 Auth 기본값만 넣어둠
         setForm({
           name: currentUser?.username ?? "",
           image: currentUser?.profileImageUrl ?? "",
           bio: "",
         });
-    }
-  };
-  init();
+      }
+    };
+    init();
   }, [currentUser]);
 
-const onPickImage = () => fileInputRef.current?.click();
+  const onPickImage = () => fileInputRef.current?.click();
 
-const onFileChange = (e) => {
-  const f = e.target.files?.[0];
-  if (!f) return;
-  setFile(f);
-  const preview = URL.createObjectURL(f);
-  setForm((p) => ({ ...p, image: preview })); // 미리보기
-};
+  const onFileChange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFile(f);
+    const preview = URL.createObjectURL(f);
+    setForm((p) => ({ ...p, image: preview })); // 미리보기
+  };
 
   const onSave = async () => {
-  try {
-    setSaving(true);
-    const token = await auth.currentUser.getIdToken();
+    try {
+      setSaving(true);
+      const token = await auth.currentUser.getIdToken();
 
-    // 1) 이미지 먼저 업로드해서 URL 받기
-    let uploadedUrl = form.image;
-    if (file) {
-      const fd = new FormData();
-      fd.append("avatar", file);
-      const upRes = await axios.post("/api/users/me/avatar", fd, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      uploadedUrl = upRes.data.url;             // 서버가 돌려준 공개 URL
-      setForm((p) => ({ ...p, image: uploadedUrl })); // 상태도 HTTP URL로 갱신
+      // 1) 이미지 먼저 업로드해서 URL 받기
+      let uploadedUrl = form.image;
+      if (file) {
+        const fd = new FormData();
+        fd.append("avatar", file);
+        const upRes = await axios.post("/api/users/me/avatar", fd, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        uploadedUrl = upRes.data.url; // 서버가 돌려준 공개 URL
+        setForm((p) => ({ ...p, image: uploadedUrl })); // 상태도 HTTP URL로 갱신
+      }
+      // 2) 이름/바이오 + 이미지 URL PATCH
+      await axios.patch(
+        "/api/users/me",
+        { username: form.name, bio: form.bio, profileImageUrl: uploadedUrl },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await refreshUser();
+
+      alert("프로필이 저장됐습니다 ✅");
+      navigate("/profile");
+    } catch (e) {
+      console.error(e);
+      alert("저장 실패");
+    } finally {
+      setSaving(false);
     }
-     // 2) 이름/바이오 + 이미지 URL PATCH
-    await axios.patch(
-      "/api/users/me",
-      { username: form.name, bio: form.bio, profileImageUrl: uploadedUrl },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    await refreshUser();
+  };
 
-    alert("프로필이 저장됐습니다 ✅");
-    navigate("/profile");
-  } catch (e) {
-    console.error(e);
-    alert("저장 실패");
-  } finally {
-    setSaving(false);
-  }
-};
+  if (loading) return <p>로딩 중...</p>;
 
-if (loading) return <p>로딩 중...</p>;
-
-  const imageSource = form.image?.startsWith("blob:") ? form.image : form.image?.startsWith("http")
-     ? form.image
-     : getUserImageSrc(form.image);
-
+  const imageSource = form.image?.startsWith("blob:")
+    ? form.image
+    : form.image?.startsWith("http")
+    ? form.image
+    : getUserImageSrc(form.image);
 
   return (
     <ScreenWrapper bg="white">
@@ -144,11 +145,22 @@ if (loading) return <p>로딩 중...</p>;
           onChange={(value) => setForm({ ...form, bio: value })}
         />
         <button
-  style={{ marginTop: 16, padding: "12px 16px", borderRadius: 12, background: theme.colors.hotpink, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", opacity: saving ? 0.7 : 1, }}
-  disabled={saving}
-  onClick={onSave}
->
-  {saving ? "저장 중..." : "저장"}  
+          style={{
+            marginTop: 16,
+            padding: "12px 16px",
+            borderRadius: 12,
+            background: theme.colors.primary,
+            color: "#fff",
+            border: "none",
+            fontWeight: 700,
+            cursor: "pointer",
+            opacity: saving ? 0.7 : 1,
+            boxShadow: "0px 5px 4px rgba(0, 0, 0, 0.2)",
+          }}
+          disabled={saving}
+          onClick={onSave}
+        >
+          {saving ? "저장 중..." : "저장"}
         </button>
       </div>
     </ScreenWrapper>
@@ -166,17 +178,17 @@ const styles = {
   contentWrapper: {
     flex: 1,
     display: "flex",
-    justifyContent: "center", 
-    alignItems: "center", 
-    minHeight: "100vh", 
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "100vh",
   },
   container: {
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    alignItems: "center", 
+    alignItems: "center",
     justifyContent: "center",
-    height: "100%", 
+    height: "100%",
     paddingHorizontal: wp(4),
   },
   centerBlock: {
