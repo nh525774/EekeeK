@@ -19,7 +19,7 @@ const BackButton = ({ size = 26 }) => {
         name="ArrowLeft"
         strokeWidth={2.5}
         size={size}
-        color={theme.colors.hotpink}
+        color={theme.colors.text}
       />
     </Button>
   );
