@@ -94,7 +94,6 @@ router.post("/me/avatar", firebaseAuth, uploadAvatar, async (req, res) => {
 });
 
 // 조회/팔로우
-router.get("/:id", getUserById);
 router.get("/by-username/:username", async (req, res) => {
   try {
     const user = await User.findOne({ username: req.params.username })
@@ -113,6 +112,7 @@ router.get("/by-username/:username", async (req, res) => {
   }
 });
 
+router.get("/:id", getUserById);
 router.get("/:id/follow-status", firebaseAuth, getFollowStatus);
 router.post("/:id/follow", firebaseAuth, followUser);
 router.post("/:id/unfollow", firebaseAuth, unfollowUser);

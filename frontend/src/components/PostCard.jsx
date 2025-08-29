@@ -1,3 +1,5 @@
+import axios from "axios";
+import { auth } from "../api/firebase";
 import { theme } from "../constants/theme";
 import { hp } from "../helpers/common";
 import Heart from "../assets/icons/Heart";
@@ -98,9 +100,10 @@ const PostCard = ({ item, currentUser, navigate, showMoreIcon = true, meId }) =>
 
   const goProfile = (e) => {
     e.stopPropagation();
-    if (!ownerId) return;
-   const isMongoId = /^[a-f\d]{24}$/i.test(String(ownerId));
-    nav(isMongoId ? `/profile/${ownerId}` : `/users/${ownerId}`);
+    if (u?.username) return nav(`/profile/${u.username}`);
+    if (ownerId)     return nav(`/profile/${ownerId}`);
+    // 둘 다 없으면 마지막 안전망
+    nav(`/profile`);
   };
 
 const openPostDetails = () => {
@@ -117,6 +120,19 @@ const handleLike = async (e) => {
   if (result.success) {
     setIsLiked((prev) => !prev);
     setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
+
+    if (!isLiked && item?.userId) {
+      await axios.post(
+       "/api/notifications",
+       {
+         receiverId: item.userId,              // 글 작성자
+         message: "회원님 게시물을 좋아했습니다.",
+         type: "post_like",
+         data: { postId: item._id },
+       },
+       { headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` } }
+     );
+    }
   } else {
     alert(result.msg || "좋아요 실패");
   }

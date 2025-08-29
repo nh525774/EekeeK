@@ -76,6 +76,20 @@ const PostDetails = () => {
         comments: [...prev.comments, res.data]
       }));
       setCommentText("");
+
+      if (post?.userId) {
+       const token = await auth.currentUser.getIdToken();
+      await axios.post(
+      "/api/notifications",
+      {
+        receiverId: post.userId, 
+        message: "회원님 게시물에 댓글을 남겼습니다.",
+        type: "post_comment",
+        data: { postId }
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+  } 
     } else {
       alert(res.msg);
     }

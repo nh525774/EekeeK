@@ -68,10 +68,13 @@ const Profile = () => {
       } catch (e) {
         res = await axios.get(`/api/posts/user/${uid}`, cfg);
       }
-      const list = Array.isArray(res?.data?.data)
-        ? res.data.data
-        : res?.data || [];
-      setPosts(list);
+      const raw = Array.isArray(res?.data?.data) ? res.data.data : (res?.data || []);
+      const filtered = (raw || []).filter((p) => {
+     const author =
+       p?.userId || p?.user?._id || p?.user?.id || p?.user?._id?.$oid;
+     return author && String(author) === String(uid);
+   });
+   setPosts(filtered);
     } catch (e) {
       console.error("사용자 글 로드 실패:", e);
       setPosts([]);
@@ -258,6 +261,20 @@ const Profile = () => {
       const { data } = !following
         ? await axios.post(`/api/users/${OwnerId}/follow`, null, cfg)
         : await axios.post(`/api/users/${OwnerId}/unfollow`, null, cfg);
+
+        // ✅ 팔로우 알림 (팔로우할 때만)
+ if (!following) {
+   await axios.post(
+     "/api/notifications",
+     {
+       receiverId: OwnerId,
+       message: "회원님을 팔로우하기 시작했습니다.",
+       type: "follow",
+       data: { userId: OwnerId }
+     },
+     cfg
+   );
+ }
 
       // 서버 스냅샷 기준 동기화(안정)
       if (typeof data?.followerCount === "number") {
