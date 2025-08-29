@@ -25,7 +25,10 @@ const userRoutes = require('./routes/userRoutes');
 const protectRoutes = require('./routes/protectRoutes');
 
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB 연결 성공!'))
+  .then(() => {
+    console.log('MongoDB 연결 성공!');
+    console.log('Connected DB:', mongoose.connection.name);  // 👈 여기 추가
+  })
   .catch(err => console.error('MongoDB 연결 실패:', err));
 
 

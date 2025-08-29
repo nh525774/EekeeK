@@ -5,18 +5,19 @@ import { useNavigate } from "react-router-dom";
 
 const CommentItem = ({ item, canDelete = false, onDelete }) => {
   const navigate = useNavigate();
-  const profileId =
-    item?.userObjectId || item?.user?._id || item?.userId || item?.user?.id;
+  const username =
+    item?.user?.username || item?.username;
+  const userId = item?.user?._id || item?.userId;
   const goProfile = () => {
-    if (!profileId) return;
-    const isMongoId = /^[a-f\d]{24}$/i.test(String(profileId));
-    navigate(isMongoId ? `/profile/${profileId}` : `/users/${profileId}`);
+    if (username) return navigate(`/profile/${username}`);
+    if (userId)   return navigate(`/profile/${userId}`);
+    navigate(`/profile`);
   };
 
   return (
     <div style={styles.container}>
       <button onClick={goProfile} style={{ all: "unset", cursor: "pointer" }}>
-    <Avatar uri={item?.userImage || "/defaultUSer.png"} />
+    <Avatar uri={item?.userImage || "/defaultUser.png"} />
   </button>
       <div style={styles.content}>
         <div style={styles.header}>
@@ -27,7 +28,7 @@ const CommentItem = ({ item, canDelete = false, onDelete }) => {
             {new Date(item?.createdAt).toLocaleDateString()}
           </span>
           {canDelete && (
-            <button onClick={handleDelete} style={styles.deleteButton}>
+            <button onClick={() => onDelete && onDelete(item)} style={styles.deleteButton}>
               삭제
             </button>
           )}
