@@ -68,7 +68,7 @@ app.post('/upload',firebaseAuth, upload.single('image'), async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message : '파일을 첨부하세요.'});
     }
-    const imageUrl = `/uploads/${req.file.filename}`;
+    const imageUrl = `${app.get("publicBaseUrl")}/uploads/${req.file.filename}`;
     const { caption } = req.body;
 
     const newPost = await Post.create({

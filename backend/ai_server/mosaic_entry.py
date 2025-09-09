@@ -2,6 +2,25 @@ import sys, json, os
 from detect_utils import detect_personal_info
 from mosaic_utils import apply_mosaic
 
+# ===== 공통 경로/URL 설정 =====
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
+os.makedirs(STATIC_DIR, exist_ok=True)
+
+# 절대 URL 생성기: BACKEND_BASE_URL이 정의되어 있으면 https://example.com + /static/.. 형태로 반환
+BACKEND_BASE_URL = os.environ.get("BACKEND_BASE_URL", "").rstrip("/")
+
+def abs_url(path_fragment: str) -> str:
+    """
+    path_fragment: '/static/xxx.jpg' 형태
+    """
+    if not path_fragment.startswith("/"):
+        path_fragment = "/" + path_fragment
+    if BACKEND_BASE_URL:
+        return f"{BACKEND_BASE_URL}{path_fragment}"
+    return path_fragment  # 환경변수 없으면 기존처럼 상대 경로 반환(프론트에서 baseUrl 붙여서 사용)
+
+
 # ✅ 입력 인자 처리 (이미지 경로 + [[x1,y1,x2,y2], ...] 박스 좌표 배열)
 image_paths = sys.argv[1:-1]
 selected_boxes = json.loads(sys.argv[-1])

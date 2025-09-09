@@ -22,6 +22,7 @@ const NewPost = () => {
   const [loading, setLoading] = useState(false);
   const [title] = useState("");
   const { files, setFiles } = useFiles();
+  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   // ✅ EditMosaic에서 돌아왔을 때: state에 updatedFiles가 있으면 반영 후 state 초기화
   useEffect(() => {
@@ -121,7 +122,7 @@ const NewPost = () => {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {files.map((file, i) => {
               if (!file) return null;
-              const previewSrc = file instanceof Blob ? URL.createObjectURL(file) : file;
+              const previewSrc = file instanceof Blob ? URL.createObjectURL(file) : (typeof file === "string" && !file.startsWith("http") ? baseUrl + file : file);
               return (
                 <div key={i} style={{ position: "relative", cursor: "pointer" }}>
                   <img
@@ -169,7 +170,7 @@ const NewPost = () => {
         {/* (이전 페이지에서 모자이크 처리 후 경로만 state로 온 경우) */}
         {files.length === 0 && location.state?.file && (
           <img
-            src={"http://localhost:5000" + location.state.file}
+            src={location.state.file?.startsWith("http") ? location.state.file : baseUrl + location.state.file}
             alt="mosaic-preview"
             style={{
               width: "100px",
