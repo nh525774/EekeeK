@@ -29,10 +29,8 @@ firebase-adminsdk.json
 serviceAccountKey.json
 
 # 업로드된 이미지/비디오 파일
-uploads/
 media/
 public/uploads/
-backend/uploads/
 
 # 인증 키, 비밀 정보
 *.pem
