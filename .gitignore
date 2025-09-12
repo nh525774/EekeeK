@@ -24,3 +24,5 @@ Thumbs.db
 # ✅ VSCode 설정 (팀 작업에서 불필요)
 .vscode/
 backend/.env
+
+venv/
