@@ -9,7 +9,7 @@ textDark: '#1D1D1D',
 
 rose: '#ef4444', roseLight: '#f87171',
 
-hotpink:'#db3069', beige:'#e7dfc6', aliceblue:'#e9f1f7', richblack:'#131b23',skyblue:'#93d3e7', lemongreen:'#eefeba',babypink:'#f7d0d6'},
+hotpink:'#db3069', beige:'#e7dfc6', aliceblue:'#e9f1f7', richblack:'#131b23',skyblue:'#93d3e7', lemongreen:'#eefeba',babypink:'#f7d0d6',darkyellow:'#f6dd62'},
 
 fonts: {
 medium: '500',
