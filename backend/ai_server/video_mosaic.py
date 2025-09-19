@@ -5,6 +5,19 @@ import cv2
 from detect_utils import detect_personal_info
 from mosaic_utils import apply_mosaic
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
+os.makedirs(STATIC_DIR, exist_ok=True)
+
+BACKEND_BASE_URL = os.environ.get("BACKEND_BASE_URL", "").rstrip("/")
+
+def abs_url(path_fragment: str) -> str:
+    if not path_fragment.startswith("/"):
+        path_fragment = "/" + path_fragment
+    if BACKEND_BASE_URL:
+        return f"{BACKEND_BASE_URL}{path_fragment}"
+    return path_fragment
+
 def to_box(poly):
     try :
         if isinstance(poly[0], (int, float)):
