@@ -1,3 +1,4 @@
+// src/pages/PostDetails.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -5,6 +6,7 @@ import PostCard from "../components/PostCard";
 import { auth } from "../api/firebase";
 import CommentItem from "../components/CommentItem";
 import { createComment, removeComment } from "../services/postService";
+import Header from "../components/Header";
 
 const PostDetails = () => {
   const { id: pathId } = useParams();
@@ -20,76 +22,77 @@ const PostDetails = () => {
   const [meId, setMeId] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
 
     (async () => {
       try {
         if (!auth.currentUser) return;
-         const token = await auth.currentUser.getIdToken();
-       const { data } = await axios.get("/api/users/me", {
-         headers: { Authorization: `Bearer ${token}` },
-       });
-       setMeId(data?._id || null);
-     } catch (e) {
-       setMeId(null);
-     }
-   })();
+        const token = await auth.currentUser.getIdToken();
+        const { data } = await axios.get("/api/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!cancelled) setMeId(data?._id ?? null);
+      } catch {
+        // e를 사용하지 않으므로 바인딩 제거 (unused-vars 해결)
+        if (!cancelled) setMeId(null);
+      }
+    })();
 
     const fetchPost = async () => {
       try {
         const res = await axios.get(`/api/posts/${postId}`);
         if (res.data.success) {
+          const postData = res.data.data ?? {};
 
-          const postData = res.data.data;
+          // 기본값 보정
+          if (!postData.user) {
+            postData.user = { name: "User", image: "/defaultUser.png" };
+          }
+          if (!Array.isArray(postData.comments)) {
+            postData.comments = [];
+          }
 
-        // 🔹 user 기본값 채우기
-        if (!postData.user) {
-          postData.user = {
-            name: "User",
-            image: "/defaultUser.png",
-          };
-        }
-
-        // 🔹 comments 기본값도 방어
-        if (!postData.comments) {
-          postData.comments = [];
-        }
-
-          setPost(res.data.data);
+          if (!cancelled) setPost(postData); // ← 보정된 값으로 세팅
         } else {
-          setError("게시글을 불러올 수 없습니다.");
-          navigate("/home"); 
+          if (!cancelled) setError("게시글을 불러올 수 없습니다.");
+          navigate("/home");
         }
       } catch (err) {
-        setError("삭제되었거나 존재하지 않는 게시글입니다.", err.message);
+        console.error(err); // err 사용으로 unused-vars 해결
+        if (!cancelled) setError("삭제되었거나 존재하지 않는 게시글입니다.");
         navigate("/home");
-    } 
+      }
     };
+
     fetchPost();
+    return () => {
+      cancelled = true;
+    };
   }, [postId, navigate]);
 
   const handleAddComment = async () => {
-    if(!commentText.trim()) return;
-    const res = await createComment(postId, commentText)
+    if (!commentText.trim()) return;
+    const res = await createComment(postId, commentText);
     if (res.success) {
-      setPost(prev => ({
+      setPost((prev) => ({
         ...prev,
-        comments: [...prev.comments, res.data]
+        comments: [...prev.comments, res.data],
       }));
       setCommentText("");
 
       if (post?.userId) {
-       const token = await auth.currentUser.getIdToken();
-      await axios.post(
-      "/api/notifications",
-      {
-        receiverId: post.userId, 
-        message: "회원님 게시물에 댓글을 남겼습니다.",
-        type: "post_comment",
-        data: { postId }
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-  } 
+        const token = await auth.currentUser.getIdToken();
+        await axios.post(
+          "/api/notifications",
+          {
+            receiverId: post.userId,
+            message: "회원님 게시물에 댓글을 남겼습니다.",
+            type: "post_comment",
+            data: { postId },
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
     } else {
       alert(res.msg);
     }
@@ -98,51 +101,85 @@ const PostDetails = () => {
   const handleDeleteComment = async (comment) => {
     const res = await removeComment(postId, comment._id);
     if (res.success) {
-      setPost(prev => ({
+      setPost((prev) => ({
         ...prev,
-        comments: prev.comments.filter(c => c._id !== comment._id)
+        comments: prev.comments.filter((c) => c._id !== comment._id),
       }));
     } else {
       alert(res.msg);
     }
   };
 
-  if (!post) return <div>{error || "로딩 중..."}</div>;
-
   return (
-    <div style={{ maxWidth: 600, margin: "0 auto", padding: 20 }}>
-      <PostCard item={post} currentUser={user} showMoreIcon={false} navigate={navigate} />
-    {/* 댓글 입력 */}
-    <div style={{ marginTop: 20, display: "flex", gap: "10px" }}>
-      <input
-      type="text"
-      value={commentText}
-      onChange={(e) => setCommentText(e.target.value)}
-      placeholder="Type comment..."
-      style={{ flex: 1, padding: 10, borderRadius: 8 }}
-      />
-      <button onClick={handleAddComment}>등록</button>
-    </div>
+    <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      {/* 상단 헤더 */}
+      <Header title="게시물" showBack />
 
-    { /*Comment list */ }
-    <div style ={{marginTop: 15 }}>
-      {
-        post?.comments?.length > 0 ? (
-          post.comments.map((comment, idx) => (
-            <CommentItem
-              key={comment?._id ?? `${comment.userId}-${comment.createdAt ?? ''}-${idx}`}
-              item={comment}
-              canDelete={
-                // 댓글 작성자(Firebase UID) 또는 게시글 작성자(ObjectId)
-                (user?.uid && comment.userId === user.uid) ||
-                (meId && String(post.userId) === String(meId))
-              }
-              onDelete = {handleDeleteComment}
-         />
-          ))
+      <div style={{ padding: 20 }}>
+        {!post ? (
+          <div>{error || "로딩 중..."}</div>
         ) : (
-          <p>첫 댓글을 남겨 보세요!</p>
-      )}
+          <>
+            <PostCard
+              item={post}
+              currentUser={user}
+              showMoreIcon={false}
+              navigate={navigate}
+            />
+
+            {/* 댓글 입력 */}
+            <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
+              <input
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Type comment..."
+                style={{
+                  flex: 1,
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "1px solid #e5e7eb",
+                  outline: "none",
+                }}
+              />
+              <button
+                onClick={handleAddComment}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1px solid #e5e7eb",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  background: "#fff",
+                }}
+              >
+                등록
+              </button>
+            </div>
+
+            {/* 댓글 리스트 */}
+            <div style={{ marginTop: 15 }}>
+              {post?.comments?.length > 0 ? (
+                post.comments.map((comment, idx) => (
+                  <CommentItem
+                    key={
+                      comment?._id ??
+                      `${comment.userId}-${comment.createdAt ?? ""}-${idx}`
+                    }
+                    item={comment}
+                    canDelete={
+                      (user?.uid && comment.userId === user.uid) ||
+                      (meId && String(post.userId) === String(meId))
+                    }
+                    onDelete={handleDeleteComment}
+                  />
+                ))
+              ) : (
+                <p>첫 댓글을 남겨 보세요!</p>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
