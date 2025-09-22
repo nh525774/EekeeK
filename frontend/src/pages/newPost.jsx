@@ -48,6 +48,7 @@ const NewPost = () => {
         });
         setMe(data); // data.username, data.profileImageUrl 존재
       } catch (e) {
+        console.error(e);
         setMe(null);
       }
     })();
@@ -105,15 +106,25 @@ const NewPost = () => {
   return (
     <ScreenWrapper bg="white">
       <Header title="Create Post" showBack />
-      <div style={{ ...styles.loginContainer, gap: "28px", paddingTop: "32px" }}>
+      <div
+        style={{ ...styles.loginContainer, gap: "28px", paddingTop: "32px" }}
+      >
         {/* 프로필 */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <Avatar uri={getUserImageSrc(me?.profileImageUrl || user?.photoURL || "/defaultUser.png")} size={hp(6.5)} rounded={theme.radius.xl} />
+          <Avatar
+            uri={getUserImageSrc(
+              me?.profileImageUrl || user?.photoURL || "/defaultUser.png"
+            )}
+            size={hp(6.5)}
+            rounded={theme.radius.xl}
+          />
           <div>
             <p style={{ fontWeight: theme.fonts.semibold }}>
               {me?.username || user?.displayName || "User"}
             </p>
-            <p style={{ fontSize: hp(1.6), color: theme.colors.textLight }}>Public</p>
+            <p style={{ fontSize: hp(1.6), color: theme.colors.textLight }}>
+              Public
+            </p>
           </div>
         </div>
 
@@ -122,9 +133,17 @@ const NewPost = () => {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {files.map((file, i) => {
               if (!file) return null;
-              const previewSrc = file instanceof Blob ? URL.createObjectURL(file) : (typeof file === "string" && !file.startsWith("http") ? baseUrl + file : file);
+              const previewSrc =
+                file instanceof Blob
+                  ? URL.createObjectURL(file)
+                  : typeof file === "string" && !file.startsWith("http")
+                  ? baseUrl + file
+                  : file;
               return (
-                <div key={i} style={{ position: "relative", cursor: "pointer" }}>
+                <div
+                  key={i}
+                  style={{ position: "relative", cursor: "pointer" }}
+                >
                   <img
                     src={previewSrc}
                     alt={`preview-${i}`}
@@ -170,7 +189,11 @@ const NewPost = () => {
         {/* (이전 페이지에서 모자이크 처리 후 경로만 state로 온 경우) */}
         {files.length === 0 && location.state?.file && (
           <img
-            src={location.state.file?.startsWith("http") ? location.state.file : baseUrl + location.state.file}
+            src={
+              location.state.file?.startsWith("http")
+                ? location.state.file
+                : baseUrl + location.state.file
+            }
             alt="mosaic-preview"
             style={{
               width: "100px",
@@ -202,7 +225,9 @@ const NewPost = () => {
             onChange={onFileChange}
             style={{ display: "none" }}
           />
-          <span style={{ color: theme.colors.textLight }}>Add to your post</span>
+          <span style={{ color: theme.colors.textLight }}>
+            Add to your post
+          </span>
         </div>
 
         {/* 포스트 제출 */}
