@@ -1,10 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ScreenWrapper from "../components/ScreenWrapper";
 import Header from "../components/Header";
 import Button from "../components/Button";
 import { theme } from "../constants/theme";
 import { useFiles } from "../contexts/FilesContext";
+import MosaicStrengthSlider, {
+  strengthToBlockSize,
+} from "../components/MosaicStrengthSlider";
 
 const EditMosaic = () => {
   const navigate = useNavigate();
@@ -30,7 +33,6 @@ const EditMosaic = () => {
     }
   };
 
-  // 파일이 Blob이면 미리보기 blob URL, 문자열이면 그대로 URL 미리보기
   const setPreviewFromFile = (f) => {
     revokePrevBlobUrl();
     if (f instanceof Blob) {
@@ -44,14 +46,12 @@ const EditMosaic = () => {
     }
   };
 
-  // 문자열 URL로 온 파일을 실제 Blob/File 로 바꿔주기
   const toFileLike = async (f) => {
     if (f instanceof Blob) return f;
     if (typeof f === "string") {
       const url = f.startsWith("http") ? f : baseUrl + f;
       const res = await fetch(url);
       const blob = await res.blob();
-      // 파일 필드로 보낼 수 있게 File 래핑
       return new File([blob], `image.${blob.type.split("/")[1] || "jpg"}`, {
         type: blob.type,
       });
@@ -65,10 +65,16 @@ const EditMosaic = () => {
   const [loading, setLoading] = useState(false);
   const [selectedBoxes, setSelectedBoxes] = useState([]);
 
+  // ▼ 추가: 강도/블록크기
+  const [strength, setStrength] = useState(40);
+  const blockSize = useMemo(
+    () => strengthToBlockSize(strength, { min: 4, max: 60 }),
+    [strength]
+  );
+
   useEffect(() => {
     setPreviewFromFile(file);
     return () => revokePrevBlobUrl();
-    // file 변경시에만
   }, [file]);
 
   const isValidBox = (box) =>
@@ -97,11 +103,11 @@ const EditMosaic = () => {
     return [x, y, w, h];
   };
 
-  // --------- 분석 호출 (파일/URL 모두 대응) ----------
+  // --------- 분석 호출 ----------
   useEffect(() => {
     const analyze = async () => {
       try {
-        const realFile = await toFileLike(file); // <- 핵심
+        const realFile = await toFileLike(file);
         if (!realFile) throw new Error("유효한 파일이 없습니다.");
 
         const type = realFile.type?.startsWith("video") ? "video" : "image";
@@ -169,7 +175,7 @@ const EditMosaic = () => {
 
   const handleMosaicApply = async () => {
     try {
-      const realFile = await toFileLike(file); // <- 문자열 URL도 처리
+      const realFile = await toFileLike(file);
       if (!realFile) {
         alert("파일이 없습니다.");
         return;
@@ -199,7 +205,9 @@ const EditMosaic = () => {
         alert("선택된 박스가 없습니다.");
         return;
       }
+
       formData.append("selected", JSON.stringify(valid));
+      formData.append("block_size", String(blockSize)); // ★ 슬라이더 값 반영
 
       setLoading(true);
       const res = await fetch(endpoint, { method: "POST", body: formData });
@@ -220,11 +228,10 @@ const EditMosaic = () => {
 
       const fullUrl = fileUrl.startsWith("http") ? fileUrl : baseUrl + fileUrl;
 
-      // 미리보기도 새 URL로 적용(경고 억제용)
       setPreviewFromFile(fullUrl);
 
       const updated = [...files];
-      updated[index] = fullUrl; // 상태에는 URL 저장
+      updated[index] = fullUrl;
       setFiles(updated);
 
       navigate(-1);
@@ -245,11 +252,14 @@ const EditMosaic = () => {
           flexDirection: "column",
           gap: 20,
           padding: 20,
+          paddingBottom: 160, // 하단 고정 바 높이 보정
+          maxWidth: 480,
+          margin: "0 auto",
         }}
       >
         {imageUrl && (
           <div
-            style={{ position: "relative", alignSelf: "center", maxWidth: 400 }}
+            style={{ position: "relative", alignSelf: "center", width: "100%" }}
           >
             <img
               ref={imgRef}
@@ -332,39 +342,103 @@ const EditMosaic = () => {
           }}
         >
           {["faces", "phones", "addresses", "location_sensitive"].map(
-            (type) => (
-              <button
-                key={type}
-                onClick={() => setSelectedType(type)}
-                style={{
-                  padding: "8px 12px",
-                  flex: 1,
-                  backgroundColor:
-                    selectedType === type ? theme.colors.primary : "#f0f0f0",
-                  color: selectedType === type ? "white" : theme.colors.text,
-                  fontWeight: selectedType === type ? "bold" : "normal",
-                  border: "none",
-                  borderRadius: 6,
-                  margin: "0 4px",
-                  cursor: "pointer",
-                  boxShadow: "0 5px 4px rgba(0, 0, 0, 0.2)",
-                }}
-              >
-                {type === "faces" && "얼굴"}
-                {type === "phones" && "전화번호"}
-                {type === "addresses" && "주소"}
-                {type === "location_sensitive" && "위치"}
-              </button>
-            )
+            (type) => {
+              const active = selectedType === type;
+              const baseShadow = active
+                ? "0 6px 14px rgba(0,0,0,0.12)" // 활성 버튼은 살짝 더 높게
+                : "0 2px 6px rgba(0,0,0,0.08)"; // 비활성 기본 그림자
+
+              return (
+                <button
+                  key={type}
+                  onClick={() => setSelectedType(type)}
+                  onMouseEnter={(e) => {
+                    if (active) {
+                      e.currentTarget.style.boxShadow =
+                        "0 8px 18px rgba(0,0,0,0.16)";
+                    } else {
+                      e.currentTarget.style.boxShadow =
+                        "0 4px 10px rgba(0,0,0,0.12)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = baseShadow;
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = "translateY(1px)"; // 눌림 느낌
+                    e.currentTarget.style.boxShadow =
+                      "0 1px 3px rgba(0,0,0,0.10)";
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = baseShadow;
+                  }}
+                  style={{
+                    padding: "10px 12px",
+                    flex: 1,
+                    backgroundColor: active ? "#F0FDF4" : "#fff",
+                    color: active ? "#14532d" : "#111827",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 12,
+                    margin: "0 4px",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    // ⬇️ 핵심: 그림자 + 트랜지션
+                    boxShadow: baseShadow,
+                    transition: "box-shadow .12s ease, transform .06s ease",
+                  }}
+                >
+                  {type === "faces" && "얼굴"}
+                  {type === "phones" && "전화번호"}
+                  {type === "addresses" && "주소"}
+                  {type === "location_sensitive" && "위치"}
+                </button>
+              );
+            }
           )}
         </div>
+      </div>
 
-        <div style={{ alignSelf: "center", marginTop: 20 }}>
-          <Button
-            title="모자이크 적용"
-            onPress={handleMosaicApply}
-            loading={loading}
+      {/* ------- 하단 고정: 슬라이더 + 적용 버튼 ------- */}
+      <div
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "#fff",
+          borderTop: "1px solid #eee",
+          boxShadow: "0 -8px 24px rgba(0,0,0,0.05)",
+          padding: "12px 16px calc(12px + env(safe-area-inset-bottom))",
+          zIndex: 50,
+        }}
+      >
+        <div style={{ maxWidth: 480, margin: "0 auto" }}>
+          <MosaicStrengthSlider
+            value={strength}
+            onChange={setStrength}
+            onCommit={setStrength}
+            label="모자이크 강도"
+            trackColor="#f7d0d6"
           />
+
+          {/* 버튼 중앙 정렬 */}
+          <div
+            style={{
+              marginTop: 12,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+            }}
+          >
+            <Button
+              title="모자이크 적용"
+              onPress={handleMosaicApply}
+              loading={loading}
+            />
+          </div>
         </div>
       </div>
     </ScreenWrapper>
