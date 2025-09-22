@@ -38,7 +38,7 @@ const Home = () => {
         image: data?.profileImageUrl || "",
       });
     } catch (e) {
-      // 실패해도 기본 이미지/이름으로 진행
+      console.error("fetch /api/users/me 실패:", e); // ← e 사용
       setMe({
         id: null,
         name: authUser?.username || authUser?.name || "",
