@@ -62,12 +62,18 @@ router.post('/protect-analyze', upload.array('image', 4), (req, res) => {
 router.post('/protect-mosaic', upload.array('image', 4), (req, res) => {
   console.log("💬 서버에서 받은 selected 값:", req.body.selected);
 
-  let selected;
+  let selected, selectedBoxes;
   try {
     selected = JSON.parse(req.body.selected);
   } catch (e) {
     return res.status(400).json({ error: "Invalid selected JSON" });
   }
+
+  try {
+   selectedBoxes = JSON.parse(req.body.selectedBoxes || "[]");
+ } catch (e) {
+   return res.status(400).json({ error: "Invalid selectedBoxes JSON" });
+ }
 
   const files = req.files;
   if (!files || files.length === 0) {
@@ -80,7 +86,7 @@ router.post('/protect-mosaic', upload.array('image', 4), (req, res) => {
   files.forEach(file => {
     const imagePath = file.path;
 
-  execFile('python', ['ai_server/mosaic_entry.py', imagePath, JSON.stringify(selected)], (error, stdout, stderr) => {
+  execFile('python', ['ai_server/mosaic_entry.py', imagePath, JSON.stringify(selected), JSON.stringify(selectedBoxes)], (error, stdout, stderr) => {
     if (error) {
       console.error('Mosaic error:', error);
       results.push(null);
@@ -144,23 +150,35 @@ router.post('/protect-video-analyze', upload.single('video'), (req, res) => {
 // /api/protect-video-mosaic
 router.post('/protect-video-mosaic', upload.single('video'), (req, res) => {
   const videoPath = req.file.path;
-  const selected = JSON.parse(req.body.selected); // 예: ["faces", "phones"]
+   // 프론트에서 넘어오는 선택 키, 박스 좌표
+  const selected = JSON.parse(req.body.selected || "[]");       // ["faces","phones"]
+  const selectedBoxes = JSON.parse(req.body.selectedBoxes || "[]"); // [[x,y,w,h], ...]
 
-  execFile('python', ['ai_server/video_mosaic.py', videoPath, JSON.stringify(selected)], (error, stdout, stderr) => {
+  // Python 스크립트 실행 인자
+  const args = [
+    "ai_server/video_mosaic.py",
+    videoPath,
+    JSON.stringify(selected),        // 2번째: 선택 키
+    JSON.stringify(selectedBoxes)    // 3번째: 선택 박스 (없으면 [])
+  ];
+
+  execFile("python", args, (error, stdout, stderr) => {
     if (error) {
-      console.error('Video Mosaic error:', error);
-      return res.status(500).json({ error: 'Video mosaic failed' });
+      console.error("Video Mosaic error:", error);
+      console.error("stderr:", stderr.toString());
+      return res.status(500).json({ success: false, msg: "Video mosaic failed" });
     }
 
     try {
-      const lines = stdout.trim().split('\n');
+      // Python에서 출력한 마지막 줄(JSON)
+      const lines = stdout.trim().split("\n");
       const lastLine = lines[lines.length - 1];
-      const result = JSON.parse(lastLine); // ✅ { url: ... }
-      res.json(result);
+      const result = JSON.parse(lastLine); // { url: "/static/..." }
+      res.json({ success: true, ...result });
     } catch (err) {
-      console.error('JSON parse error:', err);
-      console.error('stdout:', stdout);
-      res.status(500).json({ error: 'Invalid JSON from Python' });
+      console.error("JSON parse error:", err);
+      console.error("stdout:", stdout.toString());
+      res.status(500).json({ success: false, msg: "Invalid JSON from Python" });
     }
   });
 });
