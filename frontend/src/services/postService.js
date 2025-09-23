@@ -12,45 +12,54 @@ export const createOrUpdatePost = async (post) => {
     let videoUrl = "";
     const baseUrl = "http://localhost:5000";
 
+    const isImg = (u) => /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(u);
+    const isVid = (u) => /\.(mp4|webm|ogg)(\?.*)?$/i.test(u);
 
-// (옵션) location.state.file 문자열도 반영
-if (post.file && typeof post.file === "string") {
-  const full = post.file.startsWith("http") ? post.file : baseUrl + post.file;
-  if (/\.(jpg|jpeg|png|gif|webp)$/i.test(full)) imageUrls.push(full);
-}
-
-// ✅ files 안의 문자열 URL 수집
-if (Array.isArray(post.files)) {
-  for (const f of post.files) {
-    if (typeof f === "string") {
-      const full = f.startsWith("http") ? f : baseUrl + f;
-      if (/\.(jpg|jpeg|png|gif|webp)$/i.test(full)) imageUrls.push(full);
+    // (옵션) location.state.file 문자열도 반영
+    if (post.file && typeof post.file === "string") {
+      const full = post.file.startsWith("http") ? post.file : baseUrl + post.file;
+      if (isVid(full)) videoUrl = full;
+      else if (isImg(full)) imageUrls.push(full);
     }
-  }
 
-  // (필요한 경우에만) 비디오 처리 유지
-  const videoFile = post.files.find((f) => typeof f !== "string" && f?.type?.includes("video"));
-  if (videoFile) {
-    const vForm = new FormData();
-    vForm.append("video", videoFile);
-    vForm.append(
-      "selected",
-      JSON.stringify(["faces","phones","license_plates","addresses","location_sensitive"])
-    );
-    const vRes = await axios.post(baseUrl + "/api/protect-video-mosaic", vForm, {
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-    });
-    if (!vRes.data?.url) return { success:false, msg:"비디오 모자이크 실패" };
-    videoUrl = baseUrl + vRes.data.url;
-  }
-}
-
+    // ✅ files 안의 문자열 URL 처리 보강
+    if (Array.isArray(post.files)) {
+      for (const f of post.files) {
+        if (typeof f === "string") {
+          const full = f.startsWith("http") ? f : baseUrl + f;
+          if (isVid(full)) {
+            // 여러 개면 마지막 걸로 대체(필요 시 배열로 확장)
+            videoUrl = full;
+          } else if (isImg(full)) {
+            imageUrls.push(full);
+          }
+        }
+      }
+      /*
+      // 파일 타입 비디오도 처리 (기존 로직 유지)
+      const videoFile = post.files.find(
+        (f) => typeof f !== "string" && f?.type?.includes("video")
+      );
+      if (videoFile) {
+        const vForm = new FormData();
+        vForm.append("video", videoFile);
+        vForm.append(
+          "selected",
+          JSON.stringify(["faces","phones","license_plates","addresses","location_sensitive"])
+        );
+        const vRes = await axios.post(baseUrl + "/api/protect-video-mosaic", vForm, {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+        });
+        if (!vRes.data?.url) return { success:false, msg:"비디오 모자이크 실패" };
+        videoUrl = baseUrl + vRes.data.url;
+    } */
+    }
 
     const newPostData = {
       userId: user.uid,
       title: post.title || "기본 제목",
       content: post.content || "",
-      imageUrls,   // <- 문자열 URL만 들어감
+      imageUrls,
       videoUrl,
     };
 
@@ -66,6 +75,7 @@ if (Array.isArray(post.files)) {
     return { success: false, msg: "Could not create your post" };
   }
 };
+
 
 export const fetchPosts = async (limit = 10) => {
   try {

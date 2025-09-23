@@ -7,9 +7,12 @@ import Comment from "../assets/icons/Comment";
 import Share from "../assets/icons/Share";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { deletePostById } from "../services/postService";
-import { createPostLike } from "../services/postService";
+import { deletePostById, createPostLike } from "../services/postService";
 import { getUserImageSrc } from "../services/imageService";
+
+const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const toAbs = (u) =>
+  typeof u === "string" && !u.startsWith("http") ? baseUrl + u : u;
 
 const styles = {
   container: {
@@ -21,7 +24,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "12px",
-    cursor: "pointer"
+    cursor: "pointer",
   },
   header: {
     display: "flex",
@@ -51,15 +54,8 @@ const styles = {
     color: theme.colors.textLight,
     margin: 0,
   },
-  postBody: {
-    color: "#333",
-    fontSize: hp(1.6),
-  },
-  media: {
-    width: "100%",
-    borderRadius: "12px",
-    objectFit: "cover",
-  },
+  postBody: { color: "#333", fontSize: hp(1.6) },
+  media: { width: "100%", borderRadius: "12px", objectFit: "cover" },
   footer: {
     display: "flex",
     alignItems: "center",
@@ -74,26 +70,32 @@ const styles = {
     alignItems: "center",
     gap: "6px",
   },
-  count: {
-    fontSize: hp(1.6),
-    color: theme.colors.text,
-  },
+  count: { fontSize: hp(1.6), color: theme.colors.text },
 };
 
-const PostCard = ({ item, currentUser, navigate, showMoreIcon = true, meId }) => {
+const PostCard = ({
+  item,
+  currentUser,
+  navigate,
+  showMoreIcon = true,
+  meId,
+}) => {
   const nav = navigate || useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const [likeCount, setLikeCount] = useState(item?.likes?.length || 0);
   const [isLiked, setIsLiked] = useState(
-  currentUser ? item?.likes?.includes(currentUser.uid) : false
-);
+    currentUser ? item?.likes?.includes(currentUser.uid) : false
+  );
 
-  // ✅ 기본값 처리
-  const ownerId = item?.userId || item?.user?._id || item?.user?.userId || item?.user?.id;
+  // 유저/작성자 파생값
+  const ownerId =
+    item?.userId || item?.user?._id || item?.user?.userId || item?.user?.id;
   const isOwner = meId && ownerId && String(ownerId) === String(meId);
   const u = item?.user || {};
   const userName = u.username || u.name || "User";
-  const userImage = getUserImageSrc(u.profileImageUrl || u.image || "/defaultUser.png");
+  const userImage = getUserImageSrc(
+    u.profileImageUrl || u.image || "/defaultUser.png"
+  );
   const postDate = item?.createdAt
     ? new Date(item.createdAt).toLocaleDateString()
     : "Now";
@@ -101,51 +103,49 @@ const PostCard = ({ item, currentUser, navigate, showMoreIcon = true, meId }) =>
   const goProfile = (e) => {
     e.stopPropagation();
     if (u?.username) return nav(`/profile/${u.username}`);
-    if (ownerId)     return nav(`/profile/${ownerId}`);
-    // 둘 다 없으면 마지막 안전망
+    if (ownerId) return nav(`/profile/${ownerId}`);
     nav(`/profile`);
   };
 
-const openPostDetails = () => {
-  if (navigate && item?._id) {
-  navigate(`/postDetail?postId=${item._id}`);
-}
-};
+  const openPostDetails = () => {
+    if (item?._id) nav(`/postDetail?postId=${item._id}`);
+  };
 
-const handleLike = async (e) => {
-  e.stopPropagation();
-  if (!currentUser) return;
+  const handleLike = async (e) => {
+    e.stopPropagation();
+    if (!currentUser) return;
 
-  const result = await createPostLike(item._id);
-  if (result.success) {
-    setIsLiked((prev) => !prev);
-    setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
-
-    if (!isLiked && item?.userId) {
-      await axios.post(
-       "/api/notifications",
-       {
-         receiverId: item.userId,              // 글 작성자
-         message: "회원님 게시물을 좋아했습니다.",
-         type: "post_like",
-         data: { postId: item._id },
-       },
-       { headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` } }
-     );
-    }
-  } else {
-    alert(result.msg || "좋아요 실패");
-  }
-};
-
-  const handleClick = () => {
-    if (navigate && item?._id) {
-      navigate(`/postDetail?postId=${item._id}`);
+    const result = await createPostLike(item._id);
+    if (result.success) {
+      setIsLiked((prev) => !prev);
+      setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
+      if (!isLiked && item?.userId) {
+        await axios.post(
+          "/api/notifications",
+          {
+            receiverId: item.userId,
+            message: "회원님 게시물을 좋아했습니다.",
+            type: "post_like",
+            data: { postId: item._id },
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${await auth.currentUser.getIdToken()}`,
+            },
+          }
+        );
+      }
+    } else {
+      alert(result.msg || "좋아요 실패");
     }
   };
 
+  const handleClick = () => {
+    if (item?._id) nav(`/postDetail?postId=${item._id}`);
+  };
+
   const handleDelete = async () => {
-    const confirmDelete = window.confirm("게시물을 삭제하시겠습니까?")
+    const confirmDelete = window.confirm("게시물을 삭제하시겠습니까?");
     if (!confirmDelete) return;
     try {
       await deletePostById(item._id);
@@ -153,112 +153,78 @@ const handleLike = async (e) => {
       window.location.reload();
     } catch (err) {
       alert("삭제 실패 : " + err.message);
-  }
-};
+    }
+  };
 
+  const isVideoUrl = (u) =>
+    typeof u === "string" && /\.(mp4|webm|ogg)(\?.*)?$/i.test(u);
 
-  const renderImages = (urls) => {
+  const renderMedia = (urls = []) => {
     if (!urls || urls.length === 0) return null;
 
-    const count = urls.length;
-
-    if (count === 1) {
-      return (
-        <img
-          src={urls[0]}
-          alt="post"
-          style={{ ...styles.media, maxHeight: "400px" }}
-        />
+    // 단일 미디어
+    if (urls.length === 1) {
+      const url = toAbs(urls[0]);
+      return isVideoUrl(url) ? (
+        <div style={{ position: "relative" }}>
+    <video
+      key={url}
+      src={url}
+      preload="metadata"
+      playsInline
+      muted
+      loop
+      autoPlay
+      crossOrigin="anonymous"
+      style={styles.media}
+      onError={() => {}}
+    />
+    <span style={{
+      position: "absolute", left: 8, bottom: 8, fontSize: 10,
+      background: "rgba(0,0,0,0.55)", color: "#fff",
+      padding: "2px 6px", borderRadius: 6, pointerEvents: "none"
+    }}>VIDEO</span>
+  </div>
+      ) : (
+        <img src={url} style={{ ...styles.media, maxHeight: "400px" }} />
       );
     }
 
-    if (count === 2) {
-      return (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "4px",
-          }}
-        >
-          {urls.map((url, i) => (
-            <img
-              key={i}
-              src={url}
-              alt={`img-${i}`}
-              style={{
-                width: "100%",
-                height: "200px",
-                objectFit: "cover",
-                borderRadius: "12px",
-              }}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    if (count === 3) {
-      return (
-        <div style={{ display: "grid", gap: "4px" }}>
-          <img
-            src={urls[0]}
-            style={{
-              width: "100%",
-              height: "200px",
-              objectFit: "cover",
-              borderRadius: "12px",
-            }}
-          />
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "4px",
-            }}
-          >
-            <img
-              src={urls[1]}
-              style={{
-                width: "100%",
-                height: "200px",
-                objectFit: "cover",
-                borderRadius: "12px",
-              }}
-            />
-            <img
-              src={urls[2]}
-              style={{
-                width: "100%",
-                height: "200px",
-                objectFit: "cover",
-                borderRadius: "12px",
-              }}
-            />
-          </div>
-        </div>
-      );
-    }
-
+    // 2개 이상 그리드
     return (
       <div
-        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
-        {urls.slice(0, 4).map((url, i) => (
-          <img
-            key={i}
-            src={url}
-            alt={`img-${i}`}
-            style={{
-              width: "100%",
-              height: "200px",
-              objectFit: "cover",
-              borderRadius: "12px",
-            }}
-          />
-        ))}
+        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}
+      >
+        {urls.map((u, i) => {
+  const url = toAbs(u);
+  return isVideoUrl(url) ? (
+    <div key={i} style={{ position: "relative" }}>
+      <video
+        src={url}
+        preload="metadata"
+        playsInline
+        muted
+        loop
+        autoPlay
+        crossOrigin="anonymous"
+        style={{ width: "100%", borderRadius: 12 }}
+        onError={() => {}}
+      />
+      <span style={{
+        position: "absolute", left: 6, bottom: 6, fontSize: 10,
+        background: "rgba(0,0,0,0.55)", color: "#fff",
+        padding: "2px 6px", borderRadius: 6, pointerEvents: "none"
+      }}>VIDEO</span>
+    </div>
+  ) : (
+    <img key={i} src={url} style={{ width: "100%", borderRadius: 12 }} />
+  );
+})}
+
       </div>
     );
   };
+
   return (
     <div style={styles.container} onClick={handleClick}>
       {/* header */}
@@ -266,58 +232,61 @@ const handleLike = async (e) => {
         <div style={styles.userInfo}>
           <button onClick={goProfile} style={{ all: "unset", cursor: "pointer" }}>
             <img src={userImage} alt="avatar" style={styles.avatar} />
-            </button>
+          </button>
           <button onClick={goProfile} style={{ all: "unset", cursor: "pointer" }}>
-        <p style={styles.username}>{userName}</p>
-        <p style={styles.postTime}>{postDate}</p>
-      </button>
+            <p style={styles.username}>{userName}</p>
+            <p style={styles.postTime}>{postDate}</p>
+          </button>
         </div>
+
         {isOwner && showMoreIcon && (
           <div style={{ position: "relative" }}>
-            <span 
-            style={{ cursor: "pointer" }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowMenu((prev) => !prev);
-            }}
-            >⋮</span>
+            <span
+              style={{ cursor: "pointer" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu((prev) => !prev);
+              }}
+            >
+              ⋮
+            </span>
             {showMenu && (
               <div
-              style = {{
-                position: "absolute",
-                 top: "24px",
+                style={{
+                  position: "absolute",
+                  top: "24px",
                   right: 0,
                   background: "#fff",
                   border: "1px solid #ccc",
                   borderRadius: "6px",
                   boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
                   zIndex: 99,
-                  minWidth : "100px",
+                  minWidth: "100px",
                   padding: "4px 0",
-              }}
+                }}
               >
-              <button
-                onClick={handleDelete}
+                <button
+                  onClick={handleDelete}
                   style={{
                     padding: "8px 16px",
                     background: "none",
                     border: "none",
-                    display: "flex", 
+                    display: "flex",
                     textAlign: "left",
                     justifyContent: "center",
                     alignItems: "center",
                     width: "100%",
-                    height: "40px", 
+                    height: "40px",
                     whiteSpace: "nowrap",
                     cursor: "pointer",
                     fontSize: "14px",
                   }}
                 >
                   삭제
-              </button>
+                </button>
               </div>
             )}
-            </div>
+          </div>
         )}
       </div>
 
@@ -325,10 +294,13 @@ const handleLike = async (e) => {
       {item.content && <div style={styles.postBody}>{item.content}</div>}
 
       {/* media */}
-      {item.imageUrls && renderImages(item.imageUrls)}
-      {item.videoUrl && (
-        <video src={item.videoUrl} controls style={styles.media} />
-      )}
+      {(() => {
+        const urls = [
+          ...(item.imageUrls || []),
+          ...(item.videoUrl ? [item.videoUrl] : []),
+        ];
+        return renderMedia(urls);
+      })()}
 
       {/* footer */}
       <div style={styles.footer}>
@@ -352,7 +324,7 @@ const handleLike = async (e) => {
           <span style={styles.count}>{item.comments?.length || 0}</span>
         </button>
 
-        <button style={styles.iconButton} /*onClick={handleShare}*/>
+        <button style={styles.iconButton}>
           <Share
             width={22}
             height={22}

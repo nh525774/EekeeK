@@ -4,6 +4,7 @@ const express = require("express");
 const mongoose = require('mongoose');
 const dotenv = require("dotenv");
 const cors = require('cors') 
+const path = require("path");
 
 const multer = require('multer');
 const Post = require('./models/Post');
@@ -34,9 +35,20 @@ mongoose.connect(process.env.MONGO_URI)
 
 app.use(cors()); //cors미들웨어 적용
 app.use(express.json());
-const path = require("path");
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use("/static", express.static(__dirname + "/static"));
+app.use(
+  "/static",
+  express.static(path.join(__dirname, "static"), {
+    setHeaders: (res, p) => {
+      if (p.endsWith(".mp4")) {
+        res.setHeader("Content-Type", "video/mp4");
+        res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        res.setHeader("Accept-Ranges", "bytes");
+      }
+    },
+  })
+);
 
 app.use('/api/search', searchRoutes);
 app.use('/api/posts', postRoutes);

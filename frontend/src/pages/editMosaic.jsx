@@ -21,51 +21,69 @@ const EditMosaic = () => {
 
   const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-  // --- blob URL 안전 관리 ---
-  const imgRef = useRef(null);
+  // --- 미디어(이미지/비디오) 미리보기 관리 ---
+  const mediaRef = useRef(null);
+  const [isVideo, setIsVideo] = useState(false);
   const blobUrlRef = useRef(null);
   const [imageUrl, setImageUrl] = useState("");
 
   const revokePrevBlobUrl = () => {
     if (blobUrlRef.current) {
-      URL.revokeObjectURL(blobUrlRef.current);
+      try { URL.revokeObjectURL(blobUrlRef.current); } catch {}
       blobUrlRef.current = null;
     }
   };
 
-  const setPreviewFromFile = (f) => {
+  async function setPreviewFromFile(fileOrUrl) {
     revokePrevBlobUrl();
-    if (f instanceof Blob) {
-      const u = URL.createObjectURL(f);
-      blobUrlRef.current = u;
-      setImageUrl(u);
-    } else if (typeof f === "string") {
-      setImageUrl(f.startsWith("http") ? f : baseUrl + f);
-    } else {
+    try {
+      if (fileOrUrl instanceof Blob) {
+        const isVid = (fileOrUrl.type || "").startsWith("video/");
+        setIsVideo(isVid);
+        const u = URL.createObjectURL(fileOrUrl);
+        blobUrlRef.current = u;
+        setImageUrl(u);
+        return;
+      }
+      if (typeof fileOrUrl === "string") {
+        const abs = fileOrUrl.startsWith("http") ? fileOrUrl : baseUrl + fileOrUrl;
+        const isVid = /\.(mp4|webm|ogg)(\?.*)?$/i.test(abs);
+        setIsVideo(isVid);
+        setImageUrl(abs);
+        return;
+      }
+      throw new Error("유효한 미디어 입력이 아닙니다.");
+    } catch (e) {
+      console.warn("[preview] 미리보기 설정 실패:", e?.message);
+      setIsVideo(false);
       setImageUrl("");
     }
-  };
+  }
 
   const toFileLike = async (f) => {
     if (f instanceof Blob) return f;
     if (typeof f === "string") {
-      const url = f.startsWith("http") ? f : baseUrl + f;
+      let url = f;
+      if (!(url.startsWith("blob:") || url.startsWith("data:"))) {
+        url = url.startsWith("http") ? url : baseUrl + url;
+      }
       const res = await fetch(url);
+      if (!res.ok) throw new Error(`리소스 다운로드 실패: ${res.status}`);
       const blob = await res.blob();
-      return new File([blob], `image.${blob.type.split("/")[1] || "jpg"}`, {
-        type: blob.type,
-      });
+      const ext = (blob.type && blob.type.split("/")[1]) || "bin";
+      return new File([blob], `media.${ext}`, { type: blob.type || "application/octet-stream" });
     }
     return null;
   };
 
   // ---------- 상태 ----------
   const [analysis, setAnalysis] = useState({});
+  const [mediaTick, setMediaTick] = useState(0);
   const [selectedType, setSelectedType] = useState("faces");
   const [loading, setLoading] = useState(false);
   const [selectedBoxes, setSelectedBoxes] = useState([]);
 
-  // ▼ 추가: 강도/블록크기
+  // ▼ 강도/블록크기
   const [strength, setStrength] = useState(40);
   const blockSize = useMemo(
     () => strengthToBlockSize(strength, { min: 4, max: 60 }),
@@ -73,7 +91,7 @@ const EditMosaic = () => {
   );
 
   useEffect(() => {
-    setPreviewFromFile(file);
+    (async () => { await setPreviewFromFile(file); })();
     return () => revokePrevBlobUrl();
   }, [file]);
 
@@ -114,26 +132,26 @@ const EditMosaic = () => {
         const formData = new FormData();
         formData.append(type, realFile);
         const endpoint =
-          type === "video"
-            ? "/api/protect-video-analyze"
-            : "/api/protect-analyze";
+          type === "video" ? "/api/protect-video-analyze" : "/api/protect-analyze";
 
         const res = await fetch(endpoint, { method: "POST", body: formData });
         const data = await res.json();
 
         const wrapBoxes = (arr) =>
-          (arr || []).filter(Boolean).map((b) => {
-            if (Array.isArray(b) && b.length === 4 && typeof b[0] === "number")
-              return { box: b };
-            if (
-              Array.isArray(b) &&
-              b.length === 4 &&
-              typeof b[0] === "object" &&
-              "x" in b[0]
-            )
-              return { box: convertPolygonToBox(b) };
-            return { box: [0, 0, 0, 0] };
-          });
+          Array.isArray(arr)
+            ? arr.filter(Boolean).map((b) => {
+                if (Array.isArray(b) && b.length === 4 && typeof b[0] === "number") {
+                  return { box: b };
+                }
+                if (Array.isArray(b) && b.length === 4 && typeof b[0] === "object" && b[0] && "x" in b[0]) {
+                  return { box: convertPolygonToBox(b) };
+                }
+                if (b && typeof b === "object" && Array.isArray(b.box)) {
+                  return { box: b.box };
+                }
+                return { box: [0, 0, 0, 0] };
+              })
+            : [];
 
         const parsed =
           type === "video"
@@ -144,17 +162,17 @@ const EditMosaic = () => {
                 location_sensitive: wrapBoxes(data.location_sensitive),
               }
             : {
-                faces: (data.results?.[0]?.faces || []).map((f) => ({
-                  box: f.box,
-                })),
+                faces: (data.results?.[0]?.faces || []).map((f) => ({ box: f.box })),
                 phones: wrapBoxes(data.results?.[0]?.phones),
                 addresses: wrapBoxes(data.results?.[0]?.addresses),
-                location_sensitive: wrapBoxes(
-                  data.results?.[0]?.location_sensitive
-                ),
+                location_sensitive: wrapBoxes(data.results?.[0]?.location_sensitive),
               };
 
         setAnalysis(parsed);
+        if (!imageUrl && data.thumb_url) {
+          const abs = data.thumb_url.startsWith("http") ? data.thumb_url : baseUrl + data.thumb_url;
+          setImageUrl(abs);
+        }
       } catch (err) {
         console.error("❌ 분석 실패", err);
         setAnalysis({});
@@ -190,30 +208,22 @@ const EditMosaic = () => {
 
       const valid = selectedBoxes
         .map((it) => (it && it.box ? it.box : it))
-        .filter(
-          (box) =>
-            Array.isArray(box) && box.length === 4 && box.every(Number.isFinite)
-        )
-        .map(([x, y, w, h]) => [
-          Math.round(x),
-          Math.round(y),
-          Math.round(x + w),
-          Math.round(y + h),
-        ]);
+        .filter((box) => Array.isArray(box) && box.length === 4 && box.every(Number.isFinite))
+        .map(([x, y, w, h]) => [Math.round(x), Math.round(y), Math.round(x + w), Math.round(y + h)]);
 
       if (valid.length === 0) {
         alert("선택된 박스가 없습니다.");
         return;
       }
 
-      formData.append("selected", JSON.stringify(valid));
-      formData.append("block_size", String(blockSize)); // ★ 슬라이더 값 반영
+      // 서버 호환성 위해 모두 전송: (키/박스/블록크기)
+      formData.append("selected", JSON.stringify([selectedType])); // ex) ["faces"]
+      formData.append("selectedBoxes", JSON.stringify(valid));     // [x1,y1,x2,y2] 배열들
+      formData.append("block_size", String(blockSize));            // 슬라이더 값
 
       setLoading(true);
       const res = await fetch(endpoint, { method: "POST", body: formData });
-      const text = await res.text();
-      const lastLine = text.trim().split("\n").pop();
-      const data = JSON.parse(lastLine);
+      const data = await res.json();
 
       if (data.error) {
         alert("모자이크 처리 실패: " + data.error);
@@ -221,18 +231,15 @@ const EditMosaic = () => {
       }
 
       const fileUrl = data.url || (data.urls && data.urls[0]);
-      if (!fileUrl) {
-        alert("⚠️ 모자이크된 이미지 URL이 없습니다.");
-        return;
-      }
-
       const fullUrl = fileUrl.startsWith("http") ? fileUrl : baseUrl + fileUrl;
 
-      setPreviewFromFile(fullUrl);
+      await setPreviewFromFile(fullUrl);
 
-      const updated = [...files];
-      updated[index] = fullUrl;
-      setFiles(updated);
+      setFiles((prev) => {
+        const cp = [...prev];
+        cp[index] = fullUrl;
+        return cp;
+      });
 
       navigate(-1);
     } catch (err) {
@@ -252,46 +259,45 @@ const EditMosaic = () => {
           flexDirection: "column",
           gap: 20,
           padding: 20,
-          paddingBottom: 160, // 하단 고정 바 높이 보정
+          paddingBottom: 160,
           maxWidth: 480,
           margin: "0 auto",
         }}
       >
         {imageUrl && (
-          <div
-            style={{ position: "relative", alignSelf: "center", width: "100%" }}
-          >
-            <img
-              ref={imgRef}
-              src={imageUrl}
-              alt="preview"
-              style={{
-                width: "100%",
-                display: "block",
-                borderRadius: 12,
-                border: "1px solid #ccc",
-              }}
-            />
+          <div style={{ position: "relative", alignSelf: "center", maxWidth: 400 }}>
+            {isVideo ? (
+              <video
+                ref={mediaRef}
+                src={imageUrl}
+                controls
+                onLoadedMetadata={() => setMediaTick((t) => t + 1)}
+                style={{ width: "100%", display: "block", borderRadius: 12, border: "1px solid #ccc" }}
+              />
+            ) : (
+              <img
+                ref={mediaRef}
+                src={imageUrl}
+                alt="preview"
+                style={{ width: "100%", display: "block", borderRadius: 12, border: "1px solid #ccc" }}
+              />
+            )}
+
             {(analysis[selectedType] || []).map((item, i) => {
               const box = item.box;
               if (!isValidBox(box)) return null;
 
-              const imgEl = imgRef.current;
-              if (!imgEl) return null;
+              const el = mediaRef.current;
+              if (!el) return null;
 
-              const scaleX =
-                (imgEl.clientWidth || 1) / (imgEl.naturalWidth || 1);
-              const scaleY =
-                (imgEl.clientHeight || 1) / (imgEl.naturalHeight || 1);
+              const naturalW = isVideo ? (el.videoWidth || 1) : (el.naturalWidth || 1);
+              const naturalH = isVideo ? (el.videoHeight || 1) : (el.naturalHeight || 1);
+              const scaleX = (el.clientWidth || 1) / naturalW;
+              const scaleY = (el.clientHeight || 1) / naturalH;
 
-              const [x, y, w, h] = clampBox(
-                box,
-                imgEl.naturalWidth || 1,
-                imgEl.naturalHeight || 1
-              );
-              const isSelected = selectedBoxes.some(
-                (b) => JSON.stringify(b) === JSON.stringify(box)
-              );
+              const [x, y, w, h] = clampBox(box, naturalW, naturalH);
+              const isSelected =
+                selectedBoxes.some((b) => JSON.stringify(b) === JSON.stringify(box));
 
               return (
                 <div
@@ -304,9 +310,7 @@ const EditMosaic = () => {
                     width: Math.max(w * scaleX, 8),
                     height: Math.max(h * scaleY, 8),
                     border: "2px dashed red",
-                    backgroundColor: isSelected
-                      ? "rgba(0,0,0,0.5)"
-                      : "rgba(0,0,0,0.3)",
+                    backgroundColor: isSelected ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.3)",
                     borderRadius: 4,
                     cursor: "pointer",
                   }}
@@ -341,66 +345,58 @@ const EditMosaic = () => {
             paddingTop: 8,
           }}
         >
-          {["faces", "phones", "addresses", "location_sensitive"].map(
-            (type) => {
-              const active = selectedType === type;
-              const baseShadow = active
-                ? "0 6px 14px rgba(0,0,0,0.12)" // 활성 버튼은 살짝 더 높게
-                : "0 2px 6px rgba(0,0,0,0.08)"; // 비활성 기본 그림자
+          {["faces", "phones", "addresses", "location_sensitive"].map((type) => {
+            const active = selectedType === type;
+            const baseShadow = active
+              ? "0 6px 14px rgba(0,0,0,0.12)"
+              : "0 2px 6px rgba(0,0,0,0.08)";
 
-              return (
-                <button
-                  key={type}
-                  onClick={() => setSelectedType(type)}
-                  onMouseEnter={(e) => {
-                    if (active) {
-                      e.currentTarget.style.boxShadow =
-                        "0 8px 18px rgba(0,0,0,0.16)";
-                    } else {
-                      e.currentTarget.style.boxShadow =
-                        "0 4px 10px rgba(0,0,0,0.12)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = baseShadow;
-                    e.currentTarget.style.transform = "translateY(0)";
-                  }}
-                  onMouseDown={(e) => {
-                    e.currentTarget.style.transform = "translateY(1px)"; // 눌림 느낌
-                    e.currentTarget.style.boxShadow =
-                      "0 1px 3px rgba(0,0,0,0.10)";
-                  }}
-                  onMouseUp={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = baseShadow;
-                  }}
-                  style={{
-                    padding: "10px 12px",
-                    flex: 1,
-                    backgroundColor: active ? "#F0FDF4" : "#fff",
-                    color: active ? "#14532d" : "#111827",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 12,
-                    margin: "0 4px",
-                    cursor: "pointer",
-                    fontWeight: 600,
-                    // ⬇️ 핵심: 그림자 + 트랜지션
-                    boxShadow: baseShadow,
-                    transition: "box-shadow .12s ease, transform .06s ease",
-                  }}
-                >
-                  {type === "faces" && "얼굴"}
-                  {type === "phones" && "전화번호"}
-                  {type === "addresses" && "주소"}
-                  {type === "location_sensitive" && "위치"}
-                </button>
-              );
-            }
-          )}
+            return (
+              <button
+                key={type}
+                onClick={() => setSelectedType(type)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = active
+                    ? "0 8px 18px rgba(0,0,0,0.16)"
+                    : "0 4px 10px rgba(0,0,0,0.12)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = baseShadow;
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = "translateY(1px)";
+                  e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.10)";
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = baseShadow;
+                }}
+                style={{
+                  padding: "10px 12px",
+                  flex: 1,
+                  backgroundColor: active ? "#F0FDF4" : "#fff",
+                  color: active ? "#14532d" : "#111827",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 12,
+                  margin: "0 4px",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  boxShadow: baseShadow,
+                  transition: "box-shadow .12s ease, transform .06s ease",
+                }}
+              >
+                {type === "faces" && "얼굴"}
+                {type === "phones" && "전화번호"}
+                {type === "addresses" && "주소"}
+                {type === "location_sensitive" && "위치"}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* ------- 하단 고정: 슬라이더 + 적용 버튼 ------- */}
+      {/* 하단: 슬라이더 + 적용 버튼 */}
       <div
         style={{
           position: "fixed",
@@ -422,8 +418,6 @@ const EditMosaic = () => {
             label="모자이크 강도"
             trackColor="#f7d0d6"
           />
-
-          {/* 버튼 중앙 정렬 */}
           <div
             style={{
               marginTop: 12,
@@ -433,11 +427,7 @@ const EditMosaic = () => {
               width: "100%",
             }}
           >
-            <Button
-              title="모자이크 적용"
-              onPress={handleMosaicApply}
-              loading={loading}
-            />
+            <Button title="모자이크 적용" onPress={handleMosaicApply} loading={loading} />
           </div>
         </div>
       </div>
