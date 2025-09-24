@@ -52,7 +52,7 @@ export const createOrUpdatePost = async (post) => {
         });
         if (!vRes.data?.url) return { success:false, msg:"비디오 모자이크 실패" };
         videoUrl = baseUrl + vRes.data.url;
-    } */
+      } */
     }
 
     const newPostData = {
@@ -61,6 +61,9 @@ export const createOrUpdatePost = async (post) => {
       content: post.content || "",
       imageUrls,
       videoUrl,
+      // ▼ 두 버전 모두 반영 (가시성/리스트 선택값 전달)
+      visibility: post.visibility || "public",
+      eeKrewListId: post.eeKrewListId, // NewPost.jsx에서 같이 넘겨주면 저장 가능
     };
 
     const res = await axios.post("/api/posts", newPostData, {
@@ -75,7 +78,6 @@ export const createOrUpdatePost = async (post) => {
     return { success: false, msg: "Could not create your post" };
   }
 };
-
 
 export const fetchPosts = async (limit = 10) => {
   try {
@@ -107,23 +109,23 @@ export const fetchPostById = async (postId) => {
     console.error("fetchPostById error: ", error);
     throw error;
   }
-
 };
-export const deletePostById = async (postId) => {
-    const token = await getIdToken(auth.currentUser);
-    return axios.delete(`/api/posts/${postId}`, {
-      headers: {
-        Authorization : `Bearer ${token}`,
-      },
-    });
-  };
 
-  export const createPostLike = async (postId) => {
-    try {
-      const token = await getIdToken(auth.currentUser);
-      const res = await axios.get(`/api/posts/${postId}/like`, {
+export const deletePostById = async (postId) => {
+  const token = await getIdToken(auth.currentUser);
+  return axios.delete(`/api/posts/${postId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+export const createPostLike = async (postId) => {
+  try {
+    const token = await getIdToken(auth.currentUser);
+    const res = await axios.get(`/api/posts/${postId}/like`, {
       headers: {
-        Authorization: `Bearer ${token}` 
+        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -136,61 +138,62 @@ export const deletePostById = async (postId) => {
     console.error("createPostLike error:", err);
     return { success: false, msg: "좋아요 중 오류 발생" };
   }
-  };
+};
 
-  export const removePostLike = async (postId) => {
-    try {
-      const token = await getIdToken(auth.currentUser);
-      const res = await axios.get(`/api/posts/${postId}/unlike`, {
+export const removePostLike = async (postId) => {
+  try {
+    const token = await getIdToken(auth.currentUser);
+    const res = await axios.get(`/api/posts/${postId}/unlike`, {
       headers: {
-        Authorization: `Bearer ${token}` 
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (res.data.success) {
       return { success: true, likes: res.data.likes };
-    } 
-    else {
-      return { success : false, msg: res.data.msg || "좋아요 취소 실패"};
+    } else {
+      return { success: false, msg: res.data.msg || "좋아요 취소 실패" };
     }
   } catch (err) {
     console.error("postLike error:", err);
     return { success: false, msg: "좋아요 취소 중 오류 발생" };
   }
-  };
+};
 
-  export const createComment = async (postId, text) => {
-    try {
-      const token = await getIdToken(auth.currentUser);
-      const res = await axios.post(`/api/posts/${postId}/comments`, 
-        { 
-          text,
-          userName: auth.currentUser.displayName || "익명",
-          userImage: auth.currentUser.photoURL || ""
-       }, 
-      { 
-        headers: {
-        Authorization: `Bearer ${token}`, 
+export const createComment = async (postId, text) => {
+  try {
+    const token = await getIdToken(auth.currentUser);
+    const res = await axios.post(
+      `/api/posts/${postId}/comments`,
+      {
+        text,
+        userName: auth.currentUser.displayName || "익명",
+        userImage: auth.currentUser.photoURL || "",
       },
-     }
-      ); 
-      return res.data;
-    } catch (err) {
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return res.data;
+  } catch (err) {
     console.error("comment error:", err);
     return { success: false, msg: "댓글 작성 실패" };
   }
 };
 
-  export const removeComment = async (postId, commentId) => {
-    try {
-      const token = await getIdToken(auth.currentUser);
-      const res = await axios.delete(`/api/posts/${postId}/comments/${commentId}`, {
+export const removeComment = async (postId, commentId) => {
+  try {
+    const token = await getIdToken(auth.currentUser);
+    const res = await axios.delete(`/api/posts/${postId}/comments/${commentId}`, {
       headers: {
-        Authorization: `Bearer ${token}` } }
-    );
-    return res.data;
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  return res.data;
   } catch (err) {
     console.error("comment error:", err);
     return { success: false, msg: "댓글 삭제 실패" };
   }
-  };
+};

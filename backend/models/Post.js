@@ -14,6 +14,12 @@ const postSchema = new Schema(
     imageUrls: { type: [String], default: [] },
     videoUrl: { type: String, default: "" },
     comments: { type: [commentSchema], default: [] },
+     visibility: {
+    type: String,
+    enum: ["public", "mutual", "eeKrew"],
+    default: "public",
+  },
+  eeKrewListId: { type: Schema.Types.ObjectId, ref: "EeKrewList" }, // 필요 시만
   },
   { timestamps: true }
 );
