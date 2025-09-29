@@ -3,8 +3,10 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const Post = require("../models/Post");
 const User = require("../models/User");
+const Notification = require("../models/Notification");
 const firebaseAuth = require("../middleware/firebaseAuth");
 const { Types } = require("mongoose");
+const { extractUsernames } = require("../utils/extractMentions");
 
 /** [공용] userId가 문자열(firebaseUid)인 옛 문서를 ObjectId로 교정 */
 async function ensureObjectIdUserId(post) {
@@ -164,38 +166,5 @@ router.get("/:id/unlike", firebaseAuth, async (req, res) => {
   }
 });
 
-/** 댓글 작성 */
-router.post("/:postId/comments", firebaseAuth, async (req, res) => {
-  try {
-    const { text } = req.body;
-    if (!text) return res.status(400).json({ success: false, msg: "댓글 내용을 입력하세요." });
-
-    const me = await User.findOne(
-      { firebaseUid: req.firebaseUid },
-      "username profileImageUrl"
-    ).lean();
-
-    const newComment = {
-      _id: new Types.ObjectId(),
-      userId: String(req.firebaseUid),
-      userName: me?.username || "User",
-      userImage: me?.profileImageUrl || "/defaultUser.png",
-      text,
-      createdAt: new Date(),
-    };
-
-    const r = await Post.updateOne(
-      { _id: req.params.postId },
-      { $push: { comments: newComment } }
-    );
-    if (r.matchedCount === 0) {
-      return res.status(404).json({ success: false, msg: "게시글을 찾을 수 없습니다." });
-    }
-    res.json({ success: true, data: newComment });
-  } catch (err) {
-    console.error("댓글 작성 실패:", err);
-    res.status(500).json({ success: false, msg: "댓글 작성 실패" });
-  }
-});
 
 module.exports = router;

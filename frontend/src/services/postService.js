@@ -183,14 +183,14 @@ export const deletePostById = async (postId) => {
 
   export const removeComment = async (postId, commentId) => {
     try {
-      const token = await getIdToken(auth.currentUser);
-      const res = await axios.delete(`/api/posts/${postId}/comments/${commentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}` } }
+      const token = await auth.currentUser.getIdToken();
+      const { data } = await axios.delete(
+      `/api/posts/${postId}/comments/${commentId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
     );
-    return res.data;
-  } catch (err) {
-    console.error("comment error:", err);
+    return data; // { success: true, data:{ commentId } }
+  } catch (e) {
+    console.error("comment delete error:", e);
     return { success: false, msg: "댓글 삭제 실패" };
   }
   };

@@ -112,6 +112,16 @@ router.get("/by-username/:username", async (req, res) => {
   }
 });
 
+// @username 프리픽스 검색
+router.get("/mention-search", firebaseAuth, async (req, res) => {
+  const q = (req.query.q || "").trim();
+  if (!q) return res.json([]);
+  const users = await User.find({ username: { $regex: "^" + q, $options: "i" } })
+    .select("_id username profileImageUrl bio")
+    .limit(8);
+  res.json(users);
+});
+
 router.get("/:id", getUserById);
 router.get("/:id/follow-status", firebaseAuth, getFollowStatus);
 router.post("/:id/follow", firebaseAuth, followUser);

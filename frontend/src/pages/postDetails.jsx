@@ -1,5 +1,5 @@
 // src/pages/PostDetails.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import PostCard from "../components/PostCard";
@@ -7,6 +7,7 @@ import { auth } from "../api/firebase";
 import CommentItem from "../components/CommentItem";
 import { createComment, removeComment } from "../services/postService";
 import Header from "../components/Header";
+import usePiiScanQueue from "../hooks/usePiiScanQueue"; // ⬅️ 추가
 
 const PostDetails = () => {
   const { id: pathId } = useParams();
@@ -33,7 +34,6 @@ const PostDetails = () => {
         });
         if (!cancelled) setMeId(data?._id ?? null);
       } catch {
-        // e를 사용하지 않으므로 바인딩 제거 (unused-vars 해결)
         if (!cancelled) setMeId(null);
       }
     })();
@@ -43,43 +43,40 @@ const PostDetails = () => {
         const res = await axios.get(`/api/posts/${postId}`);
         if (res.data.success) {
           const postData = res.data.data ?? {};
-
-          // 기본값 보정
-          if (!postData.user) {
-            postData.user = { name: "User", image: "/defaultUser.png" };
-          }
-          if (!Array.isArray(postData.comments)) {
-            postData.comments = [];
-          }
-
-          if (!cancelled) setPost(postData); // ← 보정된 값으로 세팅
+          if (!postData.user) postData.user = { name: "User", image: "/defaultUser.png" };
+          if (!Array.isArray(postData.comments)) postData.comments = [];
+          if (!cancelled) setPost(postData);
         } else {
           if (!cancelled) setError("게시글을 불러올 수 없습니다.");
           navigate("/home");
         }
       } catch (err) {
-        console.error(err); // err 사용으로 unused-vars 해결
+        console.error(err);
         if (!cancelled) setError("삭제되었거나 존재하지 않는 게시글입니다.");
         navigate("/home");
       }
     };
 
     fetchPost();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [postId, navigate]);
 
+  // ⬇️ 자동 백그라운드 PII 스캔 (동시 2개)
+  const comments = useMemo(() => post?.comments ?? [], [post]);
+  const { getResultFor } = usePiiScanQueue(comments, { concurrency: 2 });
+
+  // 댓글 작성
   const handleAddComment = async () => {
     if (!commentText.trim()) return;
     const res = await createComment(postId, commentText);
     if (res.success) {
-      setPost((prev) => ({
-        ...prev,
-        comments: [...prev.comments, res.data],
-      }));
       setCommentText("");
+      // 새 댓글을 로컬에 붙여주면 훅이 자동으로 스캔함
+      setPost(prev =>
+        prev ? { ...prev, comments: [...(prev.comments || []), res.data] } : prev
+      );
 
+      // 알림 유지 로직
       if (post?.userId) {
         const token = await auth.currentUser.getIdToken();
         await axios.post(
@@ -112,9 +109,7 @@ const PostDetails = () => {
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto" }}>
-      {/* 상단 헤더 */}
       <Header title="게시물" showBack />
-
       <div style={{ padding: 20 }}>
         {!post ? (
           <div>{error || "로딩 중..."}</div>
@@ -159,21 +154,26 @@ const PostDetails = () => {
 
             {/* 댓글 리스트 */}
             <div style={{ marginTop: 15 }}>
-              {post?.comments?.length > 0 ? (
-                post.comments.map((comment, idx) => (
-                  <CommentItem
-                    key={
-                      comment?._id ??
-                      `${comment.userId}-${comment.createdAt ?? ""}-${idx}`
-                    }
-                    item={comment}
-                    canDelete={
-                      (user?.uid && comment.userId === user.uid) ||
-                      (meId && String(post.userId) === String(meId))
-                    }
-                    onDelete={handleDeleteComment}
-                  />
-                ))
+              {comments.length > 0 ? (
+                comments.map((comment, idx) => {
+                  const r = getResultFor(comment);
+                  const scanning = !r;
+                  const displayText = r?.maskedText ?? comment.text ?? "";
+
+                  return (
+                    <CommentItem
+                      key={comment?._id ?? `${comment.userId}-${comment.createdAt ?? ""}-${idx}`}
+                      item={comment}
+                      displayText={displayText}     // ⬅️ 추가 전달
+                      scanning={scanning}           // ⬅️ 상태표시용(선택)
+                      canDelete={
+                        (user?.uid && comment.userId === user.uid) ||
+                        (meId && String(post.userId) === String(meId))
+                      }
+                      onDelete={handleDeleteComment}
+                    />
+                  );
+                })
               ) : (
                 <p>첫 댓글을 남겨 보세요!</p>
               )}

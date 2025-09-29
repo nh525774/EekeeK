@@ -1,6 +1,84 @@
 // controllers/userController.js
 const mongoose = require("mongoose");
 const User = require("../models/User");
+const UserLoginProfile = require("../models/UserLoginProfile");
+
+// 최초 등록(회원가입)
+exports.registerUser = async (req, res) => {
+  try {
+    const { firebaseUid } = req;
+    if (!firebaseUid) return res.status(401).json({ message: "인증 필요" });
+
+    const { username, bio, profileImageUrl, lat, lng, locationConsent } = req.body || {};
+    if (!username || !username.trim()) {
+      return res.status(400).json({ message: "username은 필수입니다." });
+    }
+    const name = username.trim();
+
+    // username 중복 체크
+    const existsName = await User.exists({ username: name });
+    if (existsName) return res.status(409).json({ message: "이미 사용 중인 username입니다." });
+
+    // 1) User 문서 생성(없으면)
+    let user = await User.findOne({ firebaseUid })
+      .select("_id username bio profileImageUrl followers following");
+    if (!user) {
+      user = await User.create({
+        firebaseUid,
+        username: name,
+        bio: bio || "",
+        profileImageUrl: profileImageUrl || "",
+        followers: [],
+        following: [],
+      });
+    } else {
+      // 이미 있던 경우에도 값 갱신 허용(선택)
+      user.username = name;
+      if (typeof bio === "string") user.bio = bio;
+      if (typeof profileImageUrl === "string") user.profileImageUrl = profileImageUrl;
+      await user.save();
+    }
+
+    // 2) UserLoginProfile 초기화/업데이트
+    let ulp = await UserLoginProfile.findOne({ userId: user._id });
+    if (!ulp) ulp = new UserLoginProfile({ userId: user._id });
+
+    // 위치 수집 동의 저장
+    ulp.locationConsent = !!locationConsent;
+
+    // 위치 동의 + 좌표 전달 시: 초기 좌표 기록
+    if (lat && lng && isFinite(+lat) && isFinite(+lng)) {
+      ulp.lastLocations = [
+        { geo: { type: "Point", coordinates: [Number(lng), Number(lat)] }, at: new Date() },
+        ...(ulp.lastLocations || []),
+      ].slice(0, 10);
+
+      // homeRegion은 대략 지역 필드(정밀주소 X). 필요시 로그인 시 GeoIP로 채워져도 OK.
+      if (!ulp.homeRegion) {
+        ulp.homeRegion = { country: null, region: null, city: null };
+      }
+    }
+
+    await ulp.save();
+
+    // 응답
+    const followerCount = Array.isArray(user.followers) ? user.followers.length : 0;
+    const followingCount = Array.isArray(user.following) ? user.following.length : 0;
+
+    return res.status(201).json({
+      _id: user._id,
+      username: user.username,
+      bio: user.bio,
+      profileImageUrl: user.profileImageUrl,
+      followerCount,
+      followingCount,
+    });
+  } catch (err) {
+    console.error("registerUser error", err);
+    return res.status(500).json({ message: "서버 오류" });
+  }
+};
+
 
 // username 자동 생성 유틸
 const makeUsernameSeed = (email) =>
@@ -40,48 +118,6 @@ const countsOf = (u) => ({
   followingCount: Array.isArray(u.following) ? u.following.length : 0,
 });
 
-// 최초 등록(수동 등록도 유지)
-exports.registerUser = async (req, res) => {
-  try {
-    const { firebaseUid } = req;
-    if (!firebaseUid) return res.status(401).json({ message: "인증 필요" });
-
-    const { username, bio, profileImageUrl } = req.body || {};
-    if (!username || !username.trim()) {
-      return res.status(400).json({ message: "username은 필수입니다." });
-    }
-    const name = username.trim();
-
-    const existsName = await User.exists({ username: name });
-    if (existsName) return res.status(409).json({ message: "이미 사용 중인 username입니다." });
-
-    let user = await User.findOne({ firebaseUid })
-      .select("_id username bio profileImageUrl followers following");
-    if (!user) {
-      user = await User.create({
-        firebaseUid,
-        username: name,
-        bio: bio || "",
-        profileImageUrl: profileImageUrl || "",
-        followers: [],
-        following: [],
-      });
-    }
-
-    const { followerCount, followingCount } = countsOf(user);
-    return res.status(201).json({
-      _id: user._id,
-      username: user.username,
-      bio: user.bio,
-      profileImageUrl: user.profileImageUrl,
-      followerCount,
-      followingCount,
-    });
-  } catch (err) {
-    console.error("registerUser error", err);
-    return res.status(500).json({ message: "서버 오류" });
-  }
-};
 
 // 내 프로필 조회 — 없으면 자동 생성
 exports.getMe = async (req, res) => {

@@ -10,7 +10,11 @@ const multer = require('multer');
 const Post = require('./models/Post');
 const firebaseAuth = require('./middleware/firebaseAuth');
 const searchRoutes = require('./routes/searchRoutes');
+const commentRoutes = require("./routes/commentRoutes");
 const notificationsRouter = require("./routes/notificationRoutes");
+const placeRoutes = require('./routes/placeRoutes');
+const meRouter = require('./routes/myState');
+const piiRoutes = require('./routes/piiRoutes');
 
 dotenv.config();
 
@@ -52,9 +56,14 @@ app.use(
 
 app.use('/api/search', searchRoutes);
 app.use('/api/posts', postRoutes);
+app.use("/api/posts/:postId/comments", commentRoutes);
 app.use('/api/users', userRoutes);
 app.use("/api/notifications", notificationsRouter);
 app.use('/api', protectRoutes);
+app.use('/api/places', placeRoutes);
+app.use('/api/me', meRouter);
+app.use("/api/pii", piiRoutes);
+
 
 app.get("/", (req, res) => {
   res.send("Backend is running! ");
