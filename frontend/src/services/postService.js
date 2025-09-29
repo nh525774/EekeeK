@@ -1,11 +1,12 @@
 import axios from "axios";
 import { auth } from "../api/firebase";
 import { getIdToken } from "firebase/auth";
-//import { uploadFile } from "./imageService";
+
+// import { uploadFile } from "./imageService";
 
 export const createOrUpdatePost = async (post) => {
   try {
-    const token = await auth.currentUser.getIdToken();
+    const token = await getIdToken(auth.currentUser);
     const user = auth.currentUser;
 
     let imageUrls = [];
@@ -22,21 +23,17 @@ export const createOrUpdatePost = async (post) => {
       else if (isImg(full)) imageUrls.push(full);
     }
 
-    // ✅ files 안의 문자열 URL 처리 보강
+    // 문자열 URL이 섞여 있을 수 있는 files 처리
     if (Array.isArray(post.files)) {
       for (const f of post.files) {
         if (typeof f === "string") {
           const full = f.startsWith("http") ? f : baseUrl + f;
-          if (isVid(full)) {
-            // 여러 개면 마지막 걸로 대체(필요 시 배열로 확장)
-            videoUrl = full;
-          } else if (isImg(full)) {
-            imageUrls.push(full);
-          }
+          if (isVid(full)) videoUrl = full;
+          else if (isImg(full)) imageUrls.push(full);
         }
       }
+      // 파일 객체 업로드 로직은 필요하면 다시 활성화
       /*
-      // 파일 타입 비디오도 처리 (기존 로직 유지)
       const videoFile = post.files.find(
         (f) => typeof f !== "string" && f?.type?.includes("video")
       );
@@ -52,7 +49,8 @@ export const createOrUpdatePost = async (post) => {
         });
         if (!vRes.data?.url) return { success:false, msg:"비디오 모자이크 실패" };
         videoUrl = baseUrl + vRes.data.url;
-    } */
+      }
+      */
     }
 
     const newPostData = {
@@ -61,6 +59,8 @@ export const createOrUpdatePost = async (post) => {
       content: post.content || "",
       imageUrls,
       videoUrl,
+      visibility: post.visibility || "public",
+      eeKrewListId: post.eeKrewListId,
     };
 
     const res = await axios.post("/api/posts", newPostData, {
@@ -76,10 +76,9 @@ export const createOrUpdatePost = async (post) => {
   }
 };
 
-
 export const fetchPosts = async (limit = 10) => {
   try {
-    const token = localStorage.getItem("firebaseToken");
+    const token = await getIdToken(auth.currentUser);
     const res = await axios.get(`/api/posts?limit=${limit}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -97,34 +96,30 @@ export const fetchPosts = async (limit = 10) => {
 
 export const fetchPostById = async (postId) => {
   try {
-    const res = await axios.get(`/api/posts/${postId}`);
-    if (res.data.success) {
-      return res.data.data;
-    } else {
-      throw new Error("Post not found");
-    }
+    const token = await getIdToken(auth.currentUser);
+    const res = await axios.get(`/api/posts/${postId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.data.success) return res.data.data;
+    throw new Error("Post not found");
   } catch (error) {
     console.error("fetchPostById error: ", error);
     throw error;
   }
-
 };
-export const deletePostById = async (postId) => {
-    const token = await getIdToken(auth.currentUser);
-    return axios.delete(`/api/posts/${postId}`, {
-      headers: {
-        Authorization : `Bearer ${token}`,
-      },
-    });
-  };
 
-  export const createPostLike = async (postId) => {
-    try {
-      const token = await getIdToken(auth.currentUser);
-      const res = await axios.get(`/api/posts/${postId}/like`, {
-      headers: {
-        Authorization: `Bearer ${token}` 
-      },
+export const deletePostById = async (postId) => {
+  const token = await getIdToken(auth.currentUser);
+  return axios.delete(`/api/posts/${postId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
+export const createPostLike = async (postId) => {
+  try {
+    const token = await getIdToken(auth.currentUser);
+    const res = await axios.get(`/api/posts/${postId}/like`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (res.data.success) {
@@ -136,61 +131,54 @@ export const deletePostById = async (postId) => {
     console.error("createPostLike error:", err);
     return { success: false, msg: "좋아요 중 오류 발생" };
   }
-  };
+};
 
-  export const removePostLike = async (postId) => {
-    try {
-      const token = await getIdToken(auth.currentUser);
-      const res = await axios.get(`/api/posts/${postId}/unlike`, {
-      headers: {
-        Authorization: `Bearer ${token}` 
-      },
+export const removePostLike = async (postId) => {
+  try {
+    const token = await getIdToken(auth.currentUser);
+    const res = await axios.get(`/api/posts/${postId}/unlike`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (res.data.success) {
       return { success: true, likes: res.data.likes };
-    } 
-    else {
-      return { success : false, msg: res.data.msg || "좋아요 취소 실패"};
+    } else {
+      return { success: false, msg: res.data.msg || "좋아요 취소 실패" };
     }
   } catch (err) {
     console.error("postLike error:", err);
     return { success: false, msg: "좋아요 취소 중 오류 발생" };
   }
-  };
+};
 
-  export const createComment = async (postId, text) => {
-    try {
-      const token = await getIdToken(auth.currentUser);
-      const res = await axios.post(`/api/posts/${postId}/comments`, 
-        { 
-          text,
-          userName: auth.currentUser.displayName || "익명",
-          userImage: auth.currentUser.photoURL || ""
-       }, 
-      { 
-        headers: {
-        Authorization: `Bearer ${token}`, 
+export const createComment = async (postId, text) => {
+  try {
+    const token = await getIdToken(auth.currentUser);
+    const res = await axios.post(
+      `/api/posts/${postId}/comments`,
+      {
+        text,
+        userName: auth.currentUser.displayName || "익명",
+        userImage: auth.currentUser.photoURL || "",
       },
-     }
-      ); 
-      return res.data;
-    } catch (err) {
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  } catch (err) {
     console.error("comment error:", err);
     return { success: false, msg: "댓글 작성 실패" };
   }
 };
 
-  export const removeComment = async (postId, commentId) => {
-    try {
-      const token = await auth.currentUser.getIdToken();
-      const { data } = await axios.delete(
-      `/api/posts/${postId}/comments/${commentId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return data; // { success: true, data:{ commentId } }
-  } catch (e) {
-    console.error("comment delete error:", e);
+export const removeComment = async (postId, commentId) => {
+  try {
+    const token = await getIdToken(auth.currentUser);
+    const res = await axios.delete(`/api/posts/${postId}/comments/${commentId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data; // { success: true, data: { commentId } }
+  } catch (err) {
+    console.error("comment delete error:", err);
     return { success: false, msg: "댓글 삭제 실패" };
   }
-  };
+};

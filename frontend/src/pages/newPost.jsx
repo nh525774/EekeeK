@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from "react";
-import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import ScreenWrapper from "../components/ScreenWrapper";
 import Header from "../components/Header";
@@ -21,6 +20,9 @@ const NewPost = () => {
   const bodyRef = useRef("");
   const [loading, setLoading] = useState(false);
   const [title] = useState("");
+  // 공개 범위 (UI)
+  const [visibility, setVisibility] = useState("public");
+
   const { files, setFiles } = useFiles();
   const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
   const toAbs = (u) => (u?.startsWith("http") ? u : baseUrl + u);
@@ -88,8 +90,9 @@ const NewPost = () => {
       const result = await createOrUpdatePost({
         title: title || "무제",
         content: bodyRef.current || "",
-        files,                    // Blob/File 또는 "/static/..." 문자열 포함
+        files, // Blob/File 또는 "/static/..." 문자열 포함
         file: location.state?.file,
+        visibility, // "public" | "mutual" | "eeKrew" (서비스가 지원하면 활용)
       });
 
       if (!result.success) {
@@ -136,11 +139,15 @@ const NewPost = () => {
   return (
     <ScreenWrapper bg="white">
       <Header title="Create Post" showBack />
-      <div style={{ ...styles.loginContainer, gap: "28px", paddingTop: "32px" }}>
+      <div
+        style={{ ...styles.loginContainer, gap: "28px", paddingTop: "32px" }}
+      >
         {/* 프로필 */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <Avatar
-            uri={getUserImageSrc(me?.profileImageUrl || user?.photoURL || "/defaultUser.png")}
+            uri={getUserImageSrc(
+              me?.profileImageUrl || user?.photoURL || "/defaultUser.png"
+            )}
             size={hp(6.5)}
             rounded={theme.radius.xl}
           />
@@ -148,7 +155,24 @@ const NewPost = () => {
             <p style={{ fontWeight: theme.fonts.semibold }}>
               {me?.username || user?.displayName || "User"}
             </p>
-            <p style={{ fontSize: hp(1.6), color: theme.colors.textLight }}>Public</p>
+            <div style={{ marginTop: 4 }}>
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value)}
+                style={{
+                  padding: "6px 10px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 10,
+                  fontSize: hp(1.6),
+                  color: theme.colors.text,
+                  background: "#fff",
+                }}
+              >
+                <option value="public">Public</option>
+                <option value="mutual">Mutual</option>
+                <option value="eeKrew">eeKrew</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -162,7 +186,9 @@ const NewPost = () => {
                 <div
                   key={i}
                   style={{ position: "relative", cursor: "pointer" }}
-                  onClick={() => navigate("/editMosaic", { state: { file, index: i } })}
+                  onClick={() =>
+                    navigate("/editMosaic", { state: { file, index: i } })
+                  }
                   onContextMenu={(e) => e.preventDefault()}
                 >
                   {isVideo(file) ? (
@@ -177,7 +203,12 @@ const NewPost = () => {
                       onError={() => {}}
                     />
                   ) : (
-                    <img key={previewSrc} src={previewSrc} alt={`preview-${i}`} style={thumbStyle} />
+                    <img
+                      key={previewSrc}
+                      src={previewSrc}
+                      alt={`preview-${i}`}
+                      style={thumbStyle}
+                    />
                   )}
 
                   <button
@@ -231,55 +262,66 @@ const NewPost = () => {
         )}
 
         {/* 이전 페이지에서 경로만 넘어온 경우 */}
-        {files.length === 0 && location.state?.file && (() => {
-          const raw = location.state.file;
-          const src = toAbs(raw);
-          const isVid = typeof raw === "string" && /\.(mp4|webm|ogg)(\?.*)?$/i.test(raw);
+        {files.length === 0 &&
+          location.state?.file &&
+          (() => {
+            const raw = location.state.file;
+            const src = toAbs(raw);
+            const isVid =
+              typeof raw === "string" && /\.(mp4|webm|ogg)(\?.*)?$/i.test(raw);
 
-          return (
-            <div
-              style={{ position: "relative", display: "inline-block", cursor: "pointer" }}
-              onClick={() => navigate("/editMosaic", { state: { file: raw, index: 0 } })}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              {isVid ? (
-                <video
-                  src={src}
-                  style={{ ...thumbStyle, pointerEvents: "none" }}
-                  preload="metadata"
-                  playsInline
-                  muted
-                  crossOrigin="anonymous"
-                  onError={() => {}}
-                />
-              ) : (
-                <img src={src} alt="mosaic-preview" style={thumbStyle} />
-              )}
-              {isVid && (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 6,
-                    bottom: 6,
-                    background: "rgba(0,0,0,0.55)",
-                    color: "white",
-                    fontSize: 10,
-                    padding: "2px 6px",
-                    borderRadius: 6,
-                    pointerEvents: "none",
-                  }}
-                >
-                  VIDEO
-                </div>
-              )}
-            </div>
-          );
-        })()}
+            return (
+              <div
+                style={{
+                  position: "relative",
+                  display: "inline-block",
+                  cursor: "pointer",
+                }}
+                onClick={() =>
+                  navigate("/editMosaic", { state: { file: raw, index: 0 } })
+                }
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                {isVid ? (
+                  <video
+                    src={src}
+                    style={{ ...thumbStyle, pointerEvents: "none" }}
+                    preload="metadata"
+                    playsInline
+                    muted
+                    crossOrigin="anonymous"
+                    onError={() => {}}
+                  />
+                ) : (
+                  <img src={src} alt="mosaic-preview" style={thumbStyle} />
+                )}
+                {isVid && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 6,
+                      bottom: 6,
+                      background: "rgba(0,0,0,0.55)",
+                      color: "white",
+                      fontSize: 10,
+                      padding: "2px 6px",
+                      borderRadius: 6,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    VIDEO
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
         {/* 글쓰기 에디터 */}
         <RichTextEditor
           editorRef={bodyRef}
-          onChange={(val) => { bodyRef.current = val; }}
+          onChange={(val) => {
+            bodyRef.current = val;
+          }}
         />
 
         {/* 업로드 버튼 */}
@@ -295,7 +337,9 @@ const NewPost = () => {
             onChange={onFileChange}
             style={{ display: "none" }}
           />
-          <span style={{ color: theme.colors.textLight }}>Add to your post</span>
+          <span style={{ color: theme.colors.textLight }}>
+            Add to your post
+          </span>
         </div>
 
         {/* 포스트 제출 */}
