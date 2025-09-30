@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+<<<<<<< HEAD
 const { Schema } = mongoose;
 
 const commentSchema = new Schema({
@@ -12,3 +13,15 @@ const commentSchema = new Schema({
 }, { timestamps: true });
 
 module.exports = commentSchema;
+=======
+
+const commentSchema = new mongoose.Schema({
+  userId: { type: String, required: true },
+  userName: { type: String, required: true },
+  userImage: { type: String, default: '' },
+  text: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+module.exports = commentSchema;
+>>>>>>> backup/20251001-0306

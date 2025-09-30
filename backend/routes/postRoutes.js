@@ -130,7 +130,9 @@ router.get("/", firebaseAuthOptional, async (req, res) => {
     res.json({ success: true, data: filtered.map(toPostDTO) });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: "게시글 조회 실패" });
+    res
+      .status(500)
+      .json({ success: false, message: "게시글 조회 실패", error: err.message });
   }
 });
 
@@ -138,7 +140,8 @@ router.get("/", firebaseAuthOptional, async (req, res) => {
 router.get("/mine", firebaseAuth, async (req, res) => {
   try {
     const me = await User.findOne({ firebaseUid: req.firebaseUid });
-    if (!me) return res.status(404).json({ success: false, message: "사용자 없음" });
+    if (!me)
+      return res.status(404).json({ success: false, message: "사용자 없음" });
 
     const rows = await Post.find({ userId: me._id }).sort({ createdAt: -1 });
     const populated = await Promise.all(
@@ -217,12 +220,52 @@ router.get("/:id/unlike", firebaseAuth, async (req, res) => {
       { _id: req.params.id },
       { $pull: { likes: req.firebaseUid } }
     );
-    if (r.matchedCount === 0) return res.status(404).json({ success: false, msg: "게시글 없음" });
+    if (r.matchedCount === 0)
+      return res.status(404).json({ success: false, msg: "게시글 없음" });
     const fresh = await Post.findById(req.params.id).lean();
     res.json({ success: true, likes: fresh?.likes || [] });
   } catch (err) {
     console.error("좋아요 취소 실패:", err);
     res.status(500).json({ success: false, msg: "좋아요 취소 실패" });
+  }
+});
+
+/** 댓글 작성 */
+router.post("/:postId/comments", firebaseAuth, async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text)
+      return res
+        .status(400)
+        .json({ success: false, msg: "댓글 내용을 입력하세요." });
+
+    const me = await User.findOne(
+      { firebaseUid: req.firebaseUid },
+      "username profileImageUrl"
+    ).lean();
+
+    const newComment = {
+      _id: new Types.ObjectId(),
+      userId: String(req.firebaseUid),
+      userName: me?.username || "User",
+      userImage: me?.profileImageUrl || "/defaultUser.png",
+      text,
+      createdAt: new Date(),
+    };
+
+    const r = await Post.updateOne(
+      { _id: req.params.postId },
+      { $push: { comments: newComment } }
+    );
+    if (r.matchedCount === 0) {
+      return res
+        .status(404)
+        .json({ success: false, msg: "게시글을 찾을 수 없습니다." });
+    }
+    res.json({ success: true, data: newComment });
+  } catch (err) {
+    console.error("댓글 작성 실패:", err);
+    res.status(500).json({ success: false, msg: "댓글 작성 실패" });
   }
 });
 

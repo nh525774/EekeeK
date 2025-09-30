@@ -4,8 +4,11 @@
 @tailwind utilities;
 
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> backup/20251001-0306
 html,
 body,
 #root {
@@ -54,6 +57,7 @@ img {
     transform: rotate(360deg);
   }
 }
+<<<<<<< HEAD
 
 /* src/index.css 제일 아래쪽에 추가 */
 .pii-masked {
@@ -84,3 +88,5 @@ img {
   color:#9a3412;
   border:1px solid #fdba74;
 }
+=======
+>>>>>>> backup/20251001-0306

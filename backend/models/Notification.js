@@ -8,7 +8,11 @@ const notificationSchema = new Schema(
     receiverId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     message:    { type: String, required: true },
     // 필요하면 enum으로 제한
+<<<<<<< HEAD
     type:       { type: String, enum: ["info", "follow", "post_like", "post_comment", "mention"], default: "info" },
+=======
+    type:       { type: String, enum: ["info", "follow", "post_like", "post_comment"], default: "info" },
+>>>>>>> backup/20251001-0306
     // 임의 데이터는 Mixed 권장
     data:       { type: Schema.Types.Mixed, default: {} },
     read:       { type: Boolean, default: false },

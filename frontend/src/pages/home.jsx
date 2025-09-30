@@ -63,7 +63,7 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
       }
       // 안전은 닫힘 지속
       setVisible(!data.closed);
-    } catch (e) {}
+    } catch {// localStorage unavailable (private mode / quota) — ignore}
   }, [key, level]);
 
   const handleClose = () => {
@@ -172,10 +172,11 @@ const Home = () => {
     return () => window.removeEventListener("focus", onFocus);
   }, [fetchMe]);
 
+  // 초기/더보기 포스트 로드 (모양 통일)
   const load = async (lim) => {
     setLoading(true);
     try {
-      const res = await fetchPosts(lim);
+      const res = await fetchPosts(lim); // { success, data: [...] }
       const arr = Array.isArray(res?.data) ? res.data : [];
       setPosts(arr);
       setHasMore(arr.length >= lim);

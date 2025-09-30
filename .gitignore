@@ -26,3 +26,5 @@ Thumbs.db
 backend/.env
 
 venv/
+backend/node_modules/
+frontend/node_modules/

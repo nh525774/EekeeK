@@ -43,9 +43,16 @@ const PostDetails = () => {
         const res = await axios.get(`/api/posts/${postId}`);
         if (res.data.success) {
           const postData = res.data.data ?? {};
-          if (!postData.user) postData.user = { name: "User", image: "/defaultUser.png" };
-          if (!Array.isArray(postData.comments)) postData.comments = [];
-          if (!cancelled) setPost(postData);
+
+          // 기본값 보정
+          if (!postData.user) {
+            postData.user = { name: "User", image: "/defaultUser.png" };
+          }
+          if (!Array.isArray(postData.comments)) {
+            postData.comments = [];
+          }
+
+          if (!cancelled) setPost(postData); // ← 보정된 값으로 세팅
         } else {
           if (!cancelled) setError("게시글을 불러올 수 없습니다.");
           navigate("/home");
@@ -109,7 +116,9 @@ const PostDetails = () => {
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      {/* 상단 헤더 */}
       <Header title="게시물" showBack />
+
       <div style={{ padding: 20 }}>
         {!post ? (
           <div>{error || "로딩 중..."}</div>
