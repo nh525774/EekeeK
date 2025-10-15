@@ -1,0 +1,29 @@
+﻿{
+    "OS":  "Microsoft Windows 11 Pro",
+    "Username":  "User",
+    "Node":  "v22.14.0",
+    "NPM":  "10.9.2",
+    "PythonWhere":  null,
+    "PythonVer":  "Python 3.12.3",
+    "PythonPkgs":  {
+                       "python-dotenv":  "NOT INSTALLED",
+                       "pillow":  "NOT INSTALLED",
+                       "scipy":  "1.15.3",
+                       "numpy":  "1.26.4",
+                       "torchvision":  "0.17.2+cpu",
+                       "torch":  "2.2.2+cpu",
+                       "opencv-python":  "NOT INSTALLED",
+                       "ultralytics":  "8.3.152"
+                   },
+    "PathsExist":  {
+                       "C:\\Users\\User\\TripleS2\\backend\\.env":  true,
+                       "C:\\Users\\User\\TripleS2\\backend\\ai_server\\models":  false,
+                       "C:\\Users\\User\\TripleS2\\backend\\uploads":  true,
+                       "C:\\Users\\User\\TripleS2\\backend\\ai_server\\static":  false
+                   },
+    "DotEnvKeys":  {
+                       "PORT":  "NOT_FOUND",
+                       "PYTHON_BIN":  "NOT_FOUND",
+                       "MONGO_URI":  "MONGO_URI=\u003cHIDDEN\u003e"
+                   }
+}
