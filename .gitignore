@@ -28,3 +28,13 @@ backend/.env
 venv/
 backend/node_modules/
 frontend/node_modules/
+
+
+uploads/
+backend/static/
+mosaic_*/
+*.mp4
+*.avi
+*.mov
+*.webm
+*.log
