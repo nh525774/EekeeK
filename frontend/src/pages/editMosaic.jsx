@@ -83,6 +83,12 @@ const EditMosaic = () => {
   const [loading, setLoading] = useState(false);
   const [selectedBoxes, setSelectedBoxes] = useState([]);
 
+  const xyxyToXywh = (arr) => {
+  if (!Array.isArray(arr) || arr.length !== 4) return [0,0,0,0];
+  const [x1, y1, x2, y2] = arr.map(Number);
+  return [x1, y1, Math.max(1, x2 - x1), Math.max(1, y2 - y1)];
+};
+
   // ▼ 강도/블록크기
   const [strength, setStrength] = useState(40);
   const blockSize = useMemo(
@@ -137,17 +143,24 @@ const EditMosaic = () => {
         const res = await fetch(endpoint, { method: "POST", body: formData });
         const data = await res.json();
 
+        // [x1,y1,x2,y2] → [x,y,w,h] 로 정규화 (이미 xywh면 건드리지 않음)
+      const normalizeBox = (arr) => {
+      if (!Array.isArray(arr) || arr.length !== 4) return [0,0,0,0];
+      const [a,b,c,d] = arr.map(Number);
+      return (c > a && d > b) ? [a, b, Math.max(1, c - a), Math.max(1, d - b)] : [a,b,c,d];
+ };
+
         const wrapBoxes = (arr) =>
           Array.isArray(arr)
             ? arr.filter(Boolean).map((b) => {
                 if (Array.isArray(b) && b.length === 4 && typeof b[0] === "number") {
-                  return { box: b };
-                }
+           return { box: normalizeBox(b) };
+         }
                 if (Array.isArray(b) && b.length === 4 && typeof b[0] === "object" && b[0] && "x" in b[0]) {
                   return { box: convertPolygonToBox(b) };
                 }
                 if (b && typeof b === "object" && Array.isArray(b.box)) {
-                  return { box: b.box };
+                  return { box: normalizeBox(b.box) };
                 }
                 return { box: [0, 0, 0, 0] };
               })
@@ -162,7 +175,7 @@ const EditMosaic = () => {
                 location_sensitive: wrapBoxes(data.location_sensitive),
               }
             : {
-                faces: (data.results?.[0]?.faces || []).map((f) => ({ box: f.box })),
+                faces: (data.results?.[0]?.faces || []).map((f) => ({ box: xyxyToXywh(f.box) })),
                 phones: wrapBoxes(data.results?.[0]?.phones),
                 addresses: wrapBoxes(data.results?.[0]?.addresses),
                 location_sensitive: wrapBoxes(data.results?.[0]?.location_sensitive),

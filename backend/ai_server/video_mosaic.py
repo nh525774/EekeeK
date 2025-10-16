@@ -115,7 +115,7 @@ def normalize_box(arr):
     except Exception:
         return (0, 0, 0, 0)
 
-def apply_mosaic_array(image, boxes):
+def apply_mosaic_array(image, boxes, block_size=15):
     if image is None:
         return image
     H, W = image.shape[:2]
@@ -133,12 +133,41 @@ def apply_mosaic_array(image, boxes):
         roi_h, roi_w = roi.shape[:2]
         if roi_h <= 0 or roi_w <= 0:
             continue
-        small = cv2.resize(roi, (max(1, roi_w // 10), max(1, roi_h // 10)))
+        base = int(block_size) if block_size else 15
+        # 예: ROI 최소변의 20~60%를 블록 개수로 사용 (원하면 계수 조절)
+        #    strengthToBlockSize(0~100)를 base로 받고, ROI 크기에 곱해줌
+        scale = max(0.15, min(0.80, base / 100.0))   # 0.15~0.80 사이
+        bs_w = max(3, int(roi_w * scale))
+        bs_h = max(3, int(roi_h * scale))
+        # 너무 세밀해지지 않게 상한/하한 약간 더 클램프 가능
+        small = cv2.resize(roi, (bs_w, bs_h))
         mosaic = cv2.resize(small, (roi_w, roi_h), interpolation=cv2.INTER_NEAREST)
         out[y:y2, x:x2] = mosaic
     return out
 
-def mosaic_video(video_path, selected_keys, fixed_boxes, output_path):
+
+# --- 회전 메타 유틸 ---
+def get_video_rotation(path):
+    try:
+        out = subprocess.check_output([
+            "ffprobe","-v","error","-select_streams","v:0",
+            "-show_entries","stream_tags=rotate","-of","default=nk=1:nw=1", path
+        ], stderr=subprocess.STDOUT).decode().strip()
+        return int(out) if out else 0
+    except Exception:
+        return 0
+
+def rotate_frame(frame, rotation):
+    if rotation == 90:
+        return cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+    if rotation == 180:
+        return cv2.rotate(frame, cv2.ROTATE_180)
+    if rotation == 270 or rotation == -90:
+        return cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    return frame
+# ----------------------
+
+def mosaic_video(video_path, selected_keys, fixed_boxes, output_path, block_size=15):
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print("❌ 비디오를 열 수 없습니다.", file=sys.stderr)
@@ -147,26 +176,22 @@ def mosaic_video(video_path, selected_keys, fixed_boxes, output_path):
     fps = cap.get(cv2.CAP_PROP_FPS) or 0
     if not fps or fps != fps or fps < 1:
         fps = 25.0
-    width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
-
-    if width <= 0 or height <= 0:
-        ok, f0 = cap.read()
-        if not ok:
-            print("❌ 첫 프레임 로드 실패", file=sys.stderr)
-            sys.exit(1)
-        height, width = f0.shape[:2]
-        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    # ✅ 회전 메타
+    rot = get_video_rotation(video_path)
+    # 첫 프레임으로 실제 출력 크기 결정 (회전 반영 이후 크기)
+    ok, f0 = cap.read()
+    if not ok:
+        print("❌ 첫 프레임 로드 실패", file=sys.stderr); sys.exit(1)
+    f0 = rotate_frame(f0, rot)
+    outH, outW = f0.shape[:2]
+    # 이후 다시 처음부터
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
     selected_keys = norm_selected(selected_keys)
 
-    rotate_cw_90 = width > height
-    if rotate_cw_90:
-        width, height = height, width 
-
     fixed_boxes = [normalize_box(extract_box(b)) for b in (fixed_boxes or [])]
 
-    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
+    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (outW, outH))
     if not out or not out.isOpened():
         print("❌ VideoWriter 열기 실패(mp4v)", file=sys.stderr)
         sys.exit(1)
@@ -189,8 +214,8 @@ def mosaic_video(video_path, selected_keys, fixed_boxes, output_path):
         if not ret:
             break
 
-        if rotate_cw_90:
-            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+        # ✅ 모든 프레임에 회전 메타 반영
+        frame = rotate_frame(frame, rot)
 
         if fixed_boxes:
             if not trackers and last_boxes:
@@ -224,7 +249,7 @@ def mosaic_video(video_path, selected_keys, fixed_boxes, output_path):
                     if tracked:
                         last_boxes = tracked
 
-        mosaic_frame = apply_mosaic_array(frame, last_boxes)
+        mosaic_frame = apply_mosaic_array(frame, last_boxes, block_size=block_size)
         out.write(mosaic_frame)
         idx += 1
 
@@ -270,13 +295,14 @@ if __name__ == "__main__":
             fixed_boxes = json.loads(sys.argv[3]) or []
         except Exception:
             fixed_boxes = []
+    block_size = int(sys.argv[4]) if len(sys.argv) >= 5 else 15
 
     output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
     os.makedirs(output_dir, exist_ok=True)
     stamp = int(time.time())
     output_path = os.path.join(output_dir, f"mosaic_{stamp}.mp4")
 
-    mosaic_video(video_path, selected_keys, fixed_boxes, output_path)
+    mosaic_video(video_path, selected_keys, fixed_boxes, output_path, block_size=block_size)
 
     # ✅ ffmpeg 변환 호출
     output_path = ensure_h264(output_path)

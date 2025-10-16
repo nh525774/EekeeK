@@ -22,8 +22,11 @@ def abs_url(path_fragment: str) -> str:
 
 
 # ✅ 입력 인자 처리 (이미지 경로 + [[x1,y1,x2,y2], ...] 박스 좌표 배열)
-image_paths = sys.argv[1:-1]
-selected_boxes = json.loads(sys.argv[-1])
+image_path = sys.argv[1] 
+selected = json.loads(sys.argv[2])           # 지금은 쓰지 않아도 OK
+selected_boxes = json.loads(sys.argv[3])
+block_size = int(sys.argv[4]) if len(sys.argv) > 4 else 15
+
 
 # ✅ static 디렉토리 준비
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
@@ -44,7 +47,7 @@ def to_box(poly):
 
 output_map = {}
 
-for image_path in image_paths:
+for image_path in [image_path]:
     final_boxes = []
     for b in selected_boxes:
         try:
@@ -63,7 +66,7 @@ for image_path in image_paths:
     filename = f"mosaic_{os.path.basename(image_path)}"
     output_path = os.path.join(static_dir, filename)
     try:
-        apply_mosaic(image_path, final_boxes, output_path)
+        apply_mosaic(image_path, final_boxes, output_path, block_size=block_size)
         output_map[image_path] = f"/static/{filename}"
         print(f"✅ 모자이크 성공: {output_map[image_path]}")
     except Exception as e:

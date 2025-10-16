@@ -214,7 +214,8 @@ router.delete("/:id", firebaseAuth, async (req, res) => {
     );
 
     const me = await User.findOne({ firebaseUid: req.firebaseUid });
-    if (!me || String(post.userId) !== String(me._id)) {
+    const authorId = post.userId?._id || post.userId;
+    if (!me || String(authorId) !== String(me._id)) {
       return res.status(403).json({ success: false, message: "권한이 없습니다." });
     }
 

@@ -17,6 +17,7 @@ const PostDetails = () => {
   const [post, setPost] = useState(null);
   const [commentText, setCommentText] = useState("");
   const [error, setError] = useState(null);
+  const [status, setStatus] = useState("loading");
 
   const user = auth.currentUser;
   const [meId, setMeId] = useState(null);
@@ -44,15 +45,20 @@ const PostDetails = () => {
           const postData = res.data.data ?? {};
           if (!postData.user) postData.user = { name: "User", image: "/defaultUser.png" };
           if (!Array.isArray(postData.comments)) postData.comments = [];
-          if (!cancelled) setPost(postData);
+          if (!cancelled) { setPost(postData); setStatus("ok"); }
         } else {
-          if (!cancelled) setError("게시글을 불러올 수 없습니다.");
-          navigate("/home");
+          if (!cancelled) { setError("게시글을 불러올 수 없습니다."); setStatus("error"); }
+          navigate("/home", { replace: true });
         }
       } catch (err) {
-        console.error(err);
-        if (!cancelled) setError("삭제되었거나 존재하지 않는 게시글입니다.");
-        navigate("/home");
+        if (axios.isAxiosError(err) && err.response?.status === 404) {
+          if (!cancelled) { setError("이 게시글은 삭제되었어요."); setStatus("gone"); }
+          navigate("/home", { replace: true });
+          return;
+        }
+        // 그 외 에러
+        if (!cancelled) { setError("게시글을 불러오지 못했습니다."); setStatus("error"); }
+        navigate("/home", { replace: true });
       }
     };
 
@@ -111,8 +117,8 @@ const PostDetails = () => {
     <div style={{ maxWidth: 600, margin: "0 auto" }}>
       <Header title="게시물" showBack />
       <div style={{ padding: 20 }}>
-        {!post ? (
-          <div>{error || "로딩 중..."}</div>
+        {status !== "ok" ? (
+          <div>{status === "loading" ? "로딩 중..." : (error || "문제가 발생했습니다.")}</div>
         ) : (
           <>
             <PostCard

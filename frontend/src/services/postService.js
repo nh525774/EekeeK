@@ -78,9 +78,9 @@ export const createOrUpdatePost = async (post) => {
 
 export const fetchPosts = async (limit = 10) => {
   try {
-    const token = await getIdToken(auth.currentUser);
+    const token = await auth.currentUser    ? await getIdToken(auth.currentUser)    : null;
     const res = await axios.get(`/api/posts?limit=${limit}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
 
     if (res.data.success) {
