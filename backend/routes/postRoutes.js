@@ -4,8 +4,10 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const { Types } = require("mongoose");
 
+
 const Post = require("../models/Post");
 const User = require("../models/User");
+const { maskByHits } = require("../utils/piiScan");
 
 // 미들웨어
 const firebaseAuth = require("../middleware/firebaseAuth");               // 토큰 필수
@@ -130,9 +132,7 @@ router.get("/", firebaseAuthOptional, async (req, res) => {
     res.json({ success: true, data: filtered.map(toPostDTO) });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({ success: false, message: "게시글 조회 실패", error: err.message });
+    res.status(500).json({ success: false, message: "게시글 조회 실패" });
   }
 });
 
@@ -140,8 +140,7 @@ router.get("/", firebaseAuthOptional, async (req, res) => {
 router.get("/mine", firebaseAuth, async (req, res) => {
   try {
     const me = await User.findOne({ firebaseUid: req.firebaseUid });
-    if (!me)
-      return res.status(404).json({ success: false, message: "사용자 없음" });
+    if (!me) return res.status(404).json({ success: false, message: "사용자 없음" });
 
     const rows = await Post.find({ userId: me._id }).sort({ createdAt: -1 });
     const populated = await Promise.all(
@@ -170,8 +169,32 @@ router.get("/:id", firebaseAuthOptional, async (req, res) => {
     if (!(await canViewPost(post, viewerId))) {
       return res.status(403).json({ success: false, message: "열람 권한이 없습니다." });
     }
+    // ↓↓↓ 여기부터 댓글별 contentForViewer 생성 (maskByHits는 utils에서 임포트해둠)
+    const viewerUid = req.firebaseUid;                // 작성자 판별용(firebaseUid 문자열)
+    const viewerObjId = viewerId?.toString?.();       // 멘션 판별용(ObjectId 문자열)
 
-    res.json({ success: true, data: toPostDTO(post) });
+    const decoratedComments = (post.comments || []).map((c) => {
+      const isAuthor =
+    (viewerUid   && String(c.userId) === String(viewerUid)) ||      // firebaseUid 형태
+    (viewerObjId && String(c.userId) === String(viewerObjId));      // ObjectId 형태
+      const isMentioned =
+        viewerObjId && Array.isArray(c.mentions)
+          ? c.mentions.some((u) => String(u) === String(viewerObjId))
+          : false;
+
+      const contentForViewer =
+        isAuthor || isMentioned
+          ? (c.text || "")
+          : maskByHits(c.text || "", c.piiHits || []);  // ★ NER 저장 범위로 마스킹
+
+      // lean()이 아닐 수도 있으니 안전하게 POJO로
+      return { ...(c.toObject?.() ?? c), contentForViewer };
+    });
+
+    const dto = toPostDTO(post);
+    dto.comments = decoratedComments;
+
+    res.json({ success: true, data: dto });
   } catch (err) {
     res.status(500).json({ success: false, message: "게시글 조회 실패", error: err.message });
   }
@@ -184,10 +207,15 @@ router.delete("/:id", firebaseAuth, async (req, res) => {
     if (!post) return res.status(404).json({ success: false, message: "게시글이 없습니다." });
 
     await ensureObjectIdUserId(post);
+    post = await Post.findById(post._id).populate(
+      "userId",
+      "username profileImageUrl"
+    );
 
     const me = await User.findOne({ firebaseUid: req.firebaseUid });
-    if (!me || String(post.userId) !== String(me._id)) {
-      return res.status(403).json({ success: false, message: "삭제 권한이 없습니다." });
+    const authorId = post.userId?._id || post.userId;
+    if (!me || String(authorId) !== String(me._id)) {
+      return res.status(403).json({ success: false, message: "권한이 없습니다." });
     }
 
     await Post.findByIdAndDelete(req.params.id);
@@ -220,52 +248,12 @@ router.get("/:id/unlike", firebaseAuth, async (req, res) => {
       { _id: req.params.id },
       { $pull: { likes: req.firebaseUid } }
     );
-    if (r.matchedCount === 0)
-      return res.status(404).json({ success: false, msg: "게시글 없음" });
+    if (r.matchedCount === 0) return res.status(404).json({ success: false, msg: "게시글 없음" });
     const fresh = await Post.findById(req.params.id).lean();
     res.json({ success: true, likes: fresh?.likes || [] });
   } catch (err) {
     console.error("좋아요 취소 실패:", err);
     res.status(500).json({ success: false, msg: "좋아요 취소 실패" });
-  }
-});
-
-/** 댓글 작성 */
-router.post("/:postId/comments", firebaseAuth, async (req, res) => {
-  try {
-    const { text } = req.body;
-    if (!text)
-      return res
-        .status(400)
-        .json({ success: false, msg: "댓글 내용을 입력하세요." });
-
-    const me = await User.findOne(
-      { firebaseUid: req.firebaseUid },
-      "username profileImageUrl"
-    ).lean();
-
-    const newComment = {
-      _id: new Types.ObjectId(),
-      userId: String(req.firebaseUid),
-      userName: me?.username || "User",
-      userImage: me?.profileImageUrl || "/defaultUser.png",
-      text,
-      createdAt: new Date(),
-    };
-
-    const r = await Post.updateOne(
-      { _id: req.params.postId },
-      { $push: { comments: newComment } }
-    );
-    if (r.matchedCount === 0) {
-      return res
-        .status(404)
-        .json({ success: false, msg: "게시글을 찾을 수 없습니다." });
-    }
-    res.json({ success: true, data: newComment });
-  } catch (err) {
-    console.error("댓글 작성 실패:", err);
-    res.status(500).json({ success: false, msg: "댓글 작성 실패" });
   }
 });
 

@@ -49,7 +49,8 @@ export const createOrUpdatePost = async (post) => {
         });
         if (!vRes.data?.url) return { success:false, msg:"비디오 모자이크 실패" };
         videoUrl = baseUrl + vRes.data.url;
-      } */
+      }
+      */
     }
 
     const newPostData = {
@@ -77,9 +78,9 @@ export const createOrUpdatePost = async (post) => {
 
 export const fetchPosts = async (limit = 10) => {
   try {
-    const token = await getIdToken(auth.currentUser);
+    const token = await auth.currentUser    ? await getIdToken(auth.currentUser)    : null;
     const res = await axios.get(`/api/posts?limit=${limit}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
 
     if (res.data.success) {
@@ -162,10 +163,11 @@ export const createComment = async (postId, text) => {
       },
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    return res.data;
+    if (res.data?.success && res.data?.data) return res.data.data; // ← 댓글 객체만 반환 (contentForViewer 포함)
+    return { _error: true, msg: res.data?.msg || "댓글 작성 실패" };
   } catch (err) {
     console.error("comment error:", err);
-    return { success: false, msg: "댓글 작성 실패" };
+    return {  _error: true, msg: "댓글 작성 실패" };
   }
 };
 

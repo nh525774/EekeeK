@@ -26,15 +26,5 @@ Thumbs.db
 backend/.env
 
 venv/
-backend/node_modules/
-frontend/node_modules/
-
-
-uploads/
-backend/static/
-mosaic_*/
-*.mp4
-*.avi
-*.mov
-*.webm
-*.log
+backend/ai_server/license_plate_detector.pt
+backend/ai_server/pii/ner_model/model.safetensors

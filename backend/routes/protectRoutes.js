@@ -61,6 +61,7 @@ router.post('/protect-analyze', upload.array('image', 4), (req, res) => {
 // /api/protect-mosaic
 router.post('/protect-mosaic', upload.array('image', 4), (req, res) => {
   console.log("💬 서버에서 받은 selected 값:", req.body.selected);
+  const blockSize = Number(req.body.block_size) || 15;
 
   let selected, selectedBoxes;
   try {
@@ -86,7 +87,7 @@ router.post('/protect-mosaic', upload.array('image', 4), (req, res) => {
   files.forEach(file => {
     const imagePath = file.path;
 
-  execFile('python', ['ai_server/mosaic_entry.py', imagePath, JSON.stringify(selected), JSON.stringify(selectedBoxes)], (error, stdout, stderr) => {
+  execFile('python', ['ai_server/mosaic_entry.py', imagePath, JSON.stringify(selected), JSON.stringify(selectedBoxes), String(blockSize)], (error, stdout, stderr) => {
     if (error) {
       console.error('Mosaic error:', error);
       results.push(null);
@@ -153,13 +154,15 @@ router.post('/protect-video-mosaic', upload.single('video'), (req, res) => {
    // 프론트에서 넘어오는 선택 키, 박스 좌표
   const selected = JSON.parse(req.body.selected || "[]");       // ["faces","phones"]
   const selectedBoxes = JSON.parse(req.body.selectedBoxes || "[]"); // [[x,y,w,h], ...]
+  const blockSize = Number(req.body.block_size) || 15;
 
   // Python 스크립트 실행 인자
   const args = [
     "ai_server/video_mosaic.py",
     videoPath,
     JSON.stringify(selected),        // 2번째: 선택 키
-    JSON.stringify(selectedBoxes)    // 3번째: 선택 박스 (없으면 [])
+    JSON.stringify(selectedBoxes),    // 3번째: 선택 박스 (없으면 [])
+    String(blockSize)
   ];
 
   execFile("python", args, (error, stdout, stderr) => {

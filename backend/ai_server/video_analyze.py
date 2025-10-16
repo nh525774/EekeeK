@@ -1,4 +1,4 @@
-import os, sys, json, cv2, time, shutil
+import os, sys, json, cv2, time, shutil, subprocess
 from detect_utils import detect_personal_info
 
 # -----------------------------
@@ -69,6 +69,25 @@ def normalize_box(arr):
         return [0, 0, 0, 0]
 # -----------------------------
 
+def get_video_rotation(path):
+    try:
+        out = subprocess.check_output([
+             "ffprobe","-v","error","-select_streams","v:0",
+             "-show_entries","stream_tags=rotate","-of","default=nk=1:nw=1", path
+         ], stderr=subprocess.STDOUT).decode().strip()
+        return int(out) if out else 0
+    except Exception:
+         return 0
+
+def rotate_frame(frame, rotation):
+     if rotation == 90:
+         return cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+     if rotation == 180:
+         return cv2.rotate(frame, cv2.ROTATE_180)
+     if rotation == 270 or rotation == -90:
+         return cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+     return frame
+
 def analyze_first_frame(video_path):
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -81,11 +100,9 @@ def analyze_first_frame(video_path):
         print(json.dumps({"error": "프레임을 읽을 수 없습니다."}))
         sys.exit(1)
 
-    h, w = frame.shape[:2]
-    # 브라우저는 회전 메타를 적용해서 '세로'로 보이는데, OpenCV는 종종 가로로 읽음
-    # 휴대폰 영상 흔한 경우: w > h 이면 90도 회전해야 브라우저와 일치
-    if w > h:
-        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+# ✅ ffprobe 회전 메타를 실제 픽셀에 반영
+    rot = get_video_rotation(video_path)
+    frame = rotate_frame(frame, rot)
 
     temp_dir = "video_temp"
     os.makedirs(temp_dir, exist_ok=True)

@@ -17,7 +17,10 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
 
   // --- 신호 추출 ---
   const reasons = Array.isArray(risk?.reasons) ? risk.reasons : [];
-  const isRapid = reasons.includes("COUNTRY_CHANGE") || reasons.includes("CITY_FAR_CHANGE") || reasons.includes("RAPID_MOVE_24H_1000KM");
+  const isRapid =
+    reasons.includes("COUNTRY_CHANGE") ||
+    reasons.includes("CITY_FAR_CHANGE") ||
+    reasons.includes("RAPID_MOVE_24H_1000KM");
   const isNew = !!isNewDevice || reasons.includes("NEW_DEVICE");
 
   // --- 레벨/메시지 결정 (요구사항)
@@ -63,14 +66,17 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
       }
       // 안전은 닫힘 지속
       setVisible(!data.closed);
-    } catch {// localStorage unavailable (private mode / quota) — ignore}
+    } catch (e) {}
   }, [key, level]);
 
   const handleClose = () => {
     setVisible(false);
     if (!key) return;
     try {
-      localStorage.setItem(key, JSON.stringify({ closed: true, at: Date.now(), level }));
+      localStorage.setItem(
+        key,
+        JSON.stringify({ closed: true, at: Date.now(), level })
+      );
     } catch (e) {}
   };
 
@@ -80,7 +86,7 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
     danger: { bg: "#d32f2f", fg: "#fff", border: "#b71c1c" }, // 빨강
     yellow: { bg: "#fbc02d", fg: "#111", border: "#f57f17" }, // 노랑
     orange: { bg: "#fb8c00", fg: "#111", border: "#ef6c00" }, // 주황
-    safe: { bg: "#2e7d32", fg: "#fff", border: "#1b5e20" },   // 초록
+    safe: { bg: "#2e7d32", fg: "#fff", border: "#1b5e20" }, // 초록
   }[level];
 
   return (
@@ -102,7 +108,9 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span>{title}</span>
-        <span style={{ fontSize: 14, opacity: 0.95, fontWeight: 500 }}>{detail}</span>
+        <span style={{ fontSize: 14, opacity: 0.95, fontWeight: 500 }}>
+          {detail}
+        </span>
       </div>
       <button
         onClick={handleClose}
@@ -172,11 +180,10 @@ const Home = () => {
     return () => window.removeEventListener("focus", onFocus);
   }, [fetchMe]);
 
-  // 초기/더보기 포스트 로드 (모양 통일)
   const load = async (lim) => {
     setLoading(true);
     try {
-      const res = await fetchPosts(lim); // { success, data: [...] }
+      const res = await fetchPosts(lim);
       const arr = Array.isArray(res?.data) ? res.data : [];
       setPosts(arr);
       setHasMore(arr.length >= lim);
@@ -201,7 +208,10 @@ const Home = () => {
 
   const headerName = me?.name || authUser?.username || authUser?.name || "User";
   const avatarUrl = getUserImageSrc(
-    me?.image || authUser?.profileImageUrl || authUser?.image || "/defaultUser.png"
+    me?.image ||
+      authUser?.profileImageUrl ||
+      authUser?.image ||
+      "/defaultUser.png"
   );
 
   const ranRef = useRef(false);
@@ -244,16 +254,43 @@ const Home = () => {
         <div style={styles.header}>
           <p style={styles.title}>EekeeK</p>
           <div style={styles.icons}>
-            <span onClick={() => navigate("/search")} style={{ cursor: "pointer" }}>
-              <Icon name="Search" size={hp(3.2)} strokeWidth={2} color={theme.colors.text} />
+            <span
+              onClick={() => navigate("/search")}
+              style={{ cursor: "pointer" }}
+            >
+              <Icon
+                name="Search"
+                size={hp(3.2)}
+                strokeWidth={2}
+                color={theme.colors.text}
+              />
             </span>
-            <span onClick={() => navigate("/notifications")} style={{ cursor: "pointer" }}>
-              <Icon name="Heart" size={hp(3.2)} strokeWidth={2} color={theme.colors.text} />
+            <span
+              onClick={() => navigate("/notifications")}
+              style={{ cursor: "pointer" }}
+            >
+              <Icon
+                name="Heart"
+                size={hp(3.2)}
+                strokeWidth={2}
+                color={theme.colors.text}
+              />
             </span>
-            <span onClick={() => navigate("/uploadPage")} style={{ cursor: "pointer" }}>
-              <Icon name="Plus" size={hp(3.2)} strokeWidth={2} color={theme.colors.text} />
+            <span
+              onClick={() => navigate("/uploadPage")}
+              style={{ cursor: "pointer" }}
+            >
+              <Icon
+                name="Plus"
+                size={hp(3.2)}
+                strokeWidth={2}
+                color={theme.colors.text}
+              />
             </span>
-            <span onClick={() => navigate("/profile")} style={{ cursor: "pointer" }}>
+            <span
+              onClick={() => navigate("/profile")}
+              style={{ cursor: "pointer" }}
+            >
               <img
                 key={avatarUrl}
                 src={avatarUrl}
@@ -272,7 +309,11 @@ const Home = () => {
         </div>
 
         {/* ✅ 항상 보이는 로그인/보안 상태 배너 (닫기 버튼 포함) */}
-        <RiskPersistentBanner risk={risk} isNewDevice={isNewDevice} userId={auth.currentUser?.uid} />
+        <RiskPersistentBanner
+          risk={risk}
+          isNewDevice={isNewDevice}
+          userId={auth.currentUser?.uid}
+        />
 
         <PostList
           posts={posts}
