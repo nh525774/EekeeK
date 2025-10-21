@@ -1,0 +1,139 @@
+/* Modern "Glass + Soft" theme for EekeeK (2025) */
+/* 1) Font stack */
+@font-face {
+  font-family: "Pretendard Variable";
+  src: local("Pretendard Variable"),
+    url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/pretendardvariable.woff2")
+      format("woff2");
+  font-weight: 45 920;
+  font-display: swap;
+}
+:root {
+  --font-sans: "Inter", "Pretendard Variable", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+
+  /* Brand */
+  --primary: 142 71% 45%; /* green: #22c55e base */
+  --primary-foreground: 0 0% 100%;
+
+  /* Surface */
+  --background: 210 30% 8%; /* deep gray */
+  --foreground: 0 0% 100%;
+
+  --muted: 220 9% 18%;
+  --muted-foreground: 220 14% 75%;
+
+  --card: 220 9% 14%;
+  --card-foreground: 0 0% 100%;
+
+  --border: 220 12% 22%;
+  --input: 220 12% 22%;
+
+  --accent: 182 65% 45%; /* teal accent */
+  --ring: 160 84% 39%;
+
+  --radius: 16px;
+}
+
+/* 2) Apply to Tailwind tokens used by shadcn/ui */
+:root {
+  --background: hsl(var(--background));
+  --foreground: hsl(var(--foreground));
+  --card: hsl(var(--card));
+  --card-foreground: hsl(var(--card-foreground));
+  --popover: hsl(var(--card));
+  --popover-foreground: hsl(var(--card-foreground));
+  --primary: hsl(var(--primary));
+  --primary-foreground: hsl(var(--primary-foreground));
+  --secondary: hsl(var(--muted));
+  --secondary-foreground: hsl(var(--foreground));
+  --muted: hsl(var(--muted));
+  --muted-foreground: hsl(var(--muted-foreground));
+  --accent: hsl(var(--accent));
+  --accent-foreground: hsl(var(--foreground));
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(var(--border));
+  --input: hsl(var(--input));
+  --ring: hsl(var(--ring));
+  --radius: 16px;
+}
+
+html,
+body {
+  font-family: var(--font-sans);
+  background: radial-gradient(
+      1200px 600px at 10% -10%,
+      hsl(160 84% 15% / 0.25),
+      transparent 40%
+    ),
+    radial-gradient(
+      900px 500px at 110% 10%,
+      hsl(182 65% 22% / 0.18),
+      transparent 45%
+    ),
+    hsl(var(--background));
+  color: hsl(var(--foreground));
+  scroll-behavior: smooth;
+}
+
+/* 3) Utilities (works with Tailwind classes) */
+.shadow-soft {
+  box-shadow: 0 1px 1px hsl(0 0% 0% / 0.05), 0 8px 24px hsl(0 0% 0% / 0.35),
+    inset 0 1px 0 hsl(0 0% 100% / 0.03);
+}
+.card-glass {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--card) / 0.6),
+    hsl(var(--card) / 0.7)
+  );
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border) / 0.8);
+  border-radius: var(--radius);
+}
+.border-gradient {
+  position: relative;
+}
+.border-gradient::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: calc(var(--radius) + 1px);
+  padding: 1px;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--accent) / 0.5),
+    hsl(var(--primary) / 0.5)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* 4) Component polish */
+.header-blur {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--background) / 0.65),
+    hsl(var(--background) / 0.35)
+  );
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid hsl(var(--border));
+}
+.btn-ghost {
+  transition: transform 0.15s ease, background-color 0.2s ease;
+}
+.btn-ghost:hover {
+  transform: translateY(-1px);
+  background-color: hsl(var(--muted) / 0.5);
+}
+.badge-eek {
+  background: hsl(var(--accent) / 0.2);
+  color: hsl(var(--accent));
+  border: 1px solid hsl(var(--accent) / 0.4);
+}
