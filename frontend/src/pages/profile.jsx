@@ -1,5 +1,4 @@
 // src/pages/Profile.jsx
-
 import React, { useEffect, useState } from "react";
 import ScreenWrapper from "../components/ScreenWrapper";
 import { useNavigate, useParams } from "react-router-dom";
@@ -13,6 +12,97 @@ import { auth } from "../api/firebase";
 import { getUserImageSrc } from "../services/imageService";
 import { onAuthStateChanged } from "firebase/auth";
 
+/* ---------------------------------------------
+ * eekrew 버튼들
+ *  - EekrewSelfButton: 내 프로필에서 목록으로 이동
+ *  - EekrewToggleButton: 남의 프로필에서 내 eekrew에 추가/제거
+ * --------------------------------------------- */
+
+function EekrewSelfButton({ onClick, compact = false }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: compact ? "6px 10px" : "8px 14px",
+        borderRadius: 999,
+        border: "1px solid #e5e7eb",
+        fontWeight: 700,
+        background: "#ECFDF5",
+        color: "#14532d",
+        boxShadow: "0 1px 6px rgba(16,185,129,.25)",
+        cursor: "pointer",
+      }}
+    >
+      eekrew
+    </button>
+  );
+}
+
+function EekrewToggleButton({ targetUserId, getAuthHeaders, compact = false }) {
+  const [active, setActive] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // 최초 상태 로드
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const cfg = await getAuthHeaders();
+        if (!cfg.headers) return;
+        const { data } = await axios.get(`/api/eekrew/is/${targetUserId}`, cfg);
+        if (mounted) setActive(!!data?.inEekrew);
+      } catch (err) {
+        console.error("eekrew 상태 조회 실패:", err);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [targetUserId, getAuthHeaders]);
+
+  const onToggle = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const cfg = await getAuthHeaders();
+      if (!cfg.headers) return;
+      const { data } = await axios.post(
+        `/api/eekrew/toggle/${targetUserId}`,
+        null,
+        cfg
+      );
+      setActive(!!data?.inEekrew);
+    } catch (err) {
+      console.error("eekrew 토글 실패:", err);
+      alert("eekrew 처리에 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={onToggle}
+      disabled={loading}
+      title={active ? "내 eekrew에서 제거" : "내 eekrew에 추가"}
+      style={{
+        padding: compact ? "6px 10px" : "8px 14px",
+        borderRadius: 999,
+        border: "1px solid #e5e7eb",
+        fontWeight: 700,
+        background: active ? "#ECFDF5" : "#fff", // 채움/비활성
+        color: active ? "#14532d" : "#111827",
+        boxShadow: active ? "0 1px 6px rgba(16,185,129,.25)" : "none",
+        opacity: loading ? 0.6 : 1,
+        cursor: loading ? "not-allowed" : "pointer",
+      }}
+    >
+      eekrew
+    </button>
+  );
+}
+
+/* --------------------------------------------- */
 const Profile = () => {
   const navigate = useNavigate();
 
@@ -38,7 +128,9 @@ const Profile = () => {
       setTimeout(() => {
         try {
           unsub();
-        } catch {}
+        } catch (e) {
+          console.error(e);
+        }
         resolve(null);
       }, timeoutMs);
     });
@@ -68,13 +160,15 @@ const Profile = () => {
       } catch (e) {
         res = await axios.get(`/api/posts/user/${uid}`, cfg);
       }
-      const raw = Array.isArray(res?.data?.data) ? res.data.data : (res?.data || []);
+      const raw = Array.isArray(res?.data?.data)
+        ? res.data.data
+        : res?.data || [];
       const filtered = (raw || []).filter((p) => {
-     const author =
-       p?.userId || p?.user?._id || p?.user?.id || p?.user?._id?.$oid;
-     return author && String(author) === String(uid);
-   });
-   setPosts(filtered);
+        const author =
+          p?.userId || p?.user?._id || p?.user?.id || p?.user?._id?.$oid;
+        return author && String(author) === String(uid);
+      });
+      setPosts(filtered);
     } catch (e) {
       console.error("사용자 글 로드 실패:", e);
       setPosts([]);
@@ -164,7 +258,6 @@ const Profile = () => {
   };
 
   // 상대 프로필 불러오기 + 팔로우 상태
-
   const fetchTarget = async () => {
     try {
       setLoading(true);
@@ -262,19 +355,19 @@ const Profile = () => {
         ? await axios.post(`/api/users/${OwnerId}/follow`, null, cfg)
         : await axios.post(`/api/users/${OwnerId}/unfollow`, null, cfg);
 
-        // ✅ 팔로우 알림 (팔로우할 때만)
- if (!following) {
-   await axios.post(
-     "/api/notifications",
-     {
-       receiverId: OwnerId,
-       message: "회원님을 팔로우하기 시작했습니다.",
-       type: "follow",
-       data: { userId: OwnerId }
-     },
-     cfg
-   );
- }
+      // ✅ 팔로우 알림 (팔로우할 때만)
+      if (!following) {
+        await axios.post(
+          "/api/notifications",
+          {
+            receiverId: OwnerId,
+            message: "회원님을 팔로우하기 시작했습니다.",
+            type: "follow",
+            data: { userId: OwnerId },
+          },
+          cfg
+        );
+      }
 
       // 서버 스냅샷 기준 동기화(안정)
       if (typeof data?.followerCount === "number") {
@@ -325,6 +418,8 @@ const Profile = () => {
         isMe={isMe}
         following={following}
         onToggleFollow={toggleFollow}
+        ownerId={OwnerId} // ✅ 추가
+        getAuthHeaders={withAuth}
       />
       {/* ----- 내/상대 게시글 그리드 ----- */}
       <div style={styles.gridWrap}>
@@ -365,6 +460,8 @@ const UserHeader = ({
   isMe,
   following,
   onToggleFollow,
+  ownerId, // ✅ 추가
+  getAuthHeaders, // ✅ 추가
 }) => {
   const displayImage =
     user?.image?.startsWith("http") || user?.image?.startsWith("blob:")
@@ -428,12 +525,24 @@ const UserHeader = ({
           </p>
         </div>
 
-        {/* 상대 프로필에서만 버튼 노출, 내 프로필이면 숨김 (기존 위치에 조건만 추가) */}
-        {!isMe ? (
-          <button style={styles.followButton} onClick={onToggleFollow}>
-            {following ? "언팔로우" : "팔로우"}
-          </button>
-        ) : null}
+        {/* 오른쪽 액션 영역 */}
+        {isMe ? (
+          <EekrewSelfButton onClick={() => navigate("/eekrew")} />
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* ✅ 팔로우 중일 때만 eekrew 토글 버튼 노출 */}
+            {following && (
+              <EekrewToggleButton
+                compact
+                targetUserId={ownerId}
+                getAuthHeaders={getAuthHeaders}
+              />
+            )}
+            <button style={styles.followButton} onClick={onToggleFollow}>
+              {following ? "언팔로우" : "팔로우"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

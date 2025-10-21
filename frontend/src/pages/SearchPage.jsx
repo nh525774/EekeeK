@@ -37,117 +37,131 @@ export default function SearchPage() {
   };
 
   const goProfile = (u) => {
-    nav(`/profile/${u.username}`); // <- 너네 규칙에 맞게 수정 가능
+    nav(`/profile/${u.username}`);
   };
 
   return (
     <ScreenWrapper bg="white">
       <Header title="Search" showBack />
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: 16 }}>
-        <h1
-          style={{
-            fontWeight: theme.fonts.bold,
-            fontSize: 20,
-            marginBottom: 12,
-          }}
-        >
-          검색
-        </h1>
-
-        <form onSubmit={onSubmit} className="flex gap-2 mb-4">
-          <input
-            ref={inputRef}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="사용자 아이디를 입력하세요"
+      <div className="min-h-[70vh] bg-gradient-to-br from-background via-muted/30 to-background text-foreground">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* 타이틀 */}
+          <h1
             style={{
-              flex: 1,
-              border: `5px solid ${theme.colors.babypink}`,
-              borderRadius: theme.radius.md,
-              padding: "10px 12px",
-              outline: "none",
-              boxShadow: "0px 3px 4px rgba(0, 0, 0, 0.2)",
+              fontWeight: theme.fonts.bold,
+              fontSize: 20,
+              marginBottom: 12,
             }}
-          />
-          <button
-            type="submit"
-            style={{
-              border: "none",
-              borderRadius: theme.radius.md,
-              padding: "10px 14px",
-              background: theme.colors.primary,
-              color: "#f9fafb",
-              cursor: "pointer",
-              boxShadow: "0px 8px 8px rgba(0, 0, 0, 0.2)",
-            }}
+            className="text-foreground"
           >
             검색
-          </button>
-        </form>
+          </h1>
 
-        {loading && <p className="text-sm text-neutral-500">검색 중…</p>}
-        {!loading && users.length === 0 && q.trim() && (
-          <p style={{ color: theme.colors.textLight }}>
-            일치하는 사용자가 없어요.
-          </p>
-        )}
-
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          {users.map((u) => (
-            <li
-              key={u._id}
-              onClick={() => goProfile(u)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "10px 8px",
-                borderRadius: theme.radius.lg,
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = theme.colors.gray)
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "transparent")
-              }
-            >
-              <img
-                src={u.profileImageUrl || "/defaultUser.png"}
-                alt=""
-                width={40}
-                height={40}
-                style={{ borderRadius: "9999px", objectFit: "cover" }}
+          {/* 검색 박스 */}
+          <form
+            onSubmit={onSubmit}
+            className="card-glass shadow-soft rounded-2xl p-4 sm:p-5 mb-5"
+          >
+            <div className="flex gap-2 items-stretch">
+              <input
+                ref={inputRef}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="사용자 아이디를 입력하세요"
+                style={{
+                  flex: 1,
+                  border: `1px solid hsl(var(--border))`,
+                  borderRadius: theme.radius.md,
+                  padding: "10px 12px",
+                  outline: "none",
+                  background: "transparent",
+                  color: "hsl(var(--foreground))",
+                }}
+                className="focus:ring-2 focus:ring-primary/30"
               />
-              <div style={{ minWidth: 0 }}>
-                <div
-                  style={{
-                    fontWeight: theme.fonts.semibold,
-                    color: theme.colors.textDark,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  @{u.username}
-                </div>
-                {u.bio && (
+              <button
+                type="submit"
+                style={{
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: theme.radius.md,
+                  padding: "10px 14px",
+                  background: "transparent",
+                  color: "hsl(var(--foreground))",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+                className="btn-ghost"
+              >
+                검색
+              </button>
+            </div>
+
+            {loading && (
+              <p className="mt-3 text-sm text-muted-foreground">검색 중…</p>
+            )}
+            {!loading && users.length === 0 && q.trim() && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                일치하는 사용자가 없어요.
+              </p>
+            )}
+          </form>
+
+          {/* 결과 리스트 */}
+          <ul className="space-y-2">
+            {users.map((u) => (
+              <li
+                key={u._id}
+                onClick={() => goProfile(u)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "10px 12px",
+                  borderRadius: theme.radius.lg,
+                  cursor: "pointer",
+                }}
+                className="card-glass shadow-soft hover:bg-muted/40 transition-colors"
+              >
+                <img
+                  src={u.profileImageUrl || "/defaultUser.png"}
+                  alt=""
+                  width={40}
+                  height={40}
+                  style={{ borderRadius: "9999px", objectFit: "cover" }}
+                  className="shadow-soft"
+                />
+                <div style={{ minWidth: 0 }}>
                   <div
                     style={{
-                      fontSize: 12,
-                      color: theme.colors.textLight,
+                      fontWeight: theme.fonts.semibold,
+                      color: theme.colors.textDark,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                     }}
+                    className="text-foreground"
                   >
-                    {u.bio}
+                    @{u.username}
                   </div>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+                  {u.bio && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: theme.colors.textLight,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                      className="text-muted-foreground"
+                    >
+                      {u.bio}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </ScreenWrapper>
   );

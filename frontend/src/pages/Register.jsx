@@ -1,17 +1,18 @@
 // src/pages/Register.jsx
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerWithEmail } from "../api/auth";
-import axios from "axios";
 import { auth } from "../api/firebase";
+
 import ScreenWrapper from "../components/ScreenWrapper";
 import Header from "../components/Header";
-import { styles } from "../constants/styles";
-import { hp } from "../helpers/common";
-import { theme } from "../constants/theme";
 import Input from "../components/Input";
-import Icon from "../assets/icons";
 import Button from "../components/Button";
+import Icon from "../assets/icons";
+
+import { styles } from "../constants/styles";
+import { theme } from "../constants/theme";
+import { hp } from "../helpers/common";
 
 const Register = () => {
   const emailRef = useRef("");
@@ -19,12 +20,20 @@ const Register = () => {
   const passwordRef = useRef("");
   const passwordCheck = useRef("");
 
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [consent, setConsent] = useState(false);
+  const navigate = useNavigate();
 
-  const handleRegister = async () => {
-    if (passwordRef.current !== passwordCheck.current) {
+  const handleRegister = useCallback(async () => {
+    const email = (emailRef.current || "").trim();
+    const username = (userRef.current || "").trim();
+    const password = (passwordRef.current || "").trim();
+    const confirm = (passwordCheck.current || "").trim();
+
+    if (!email || !username || !password || !confirm) {
+      alert("모든 필드를 입력해주세요.");
+      return;
+    }
+    if (password !== confirm) {
       alert("비밀번호가 일치하지 않습니다.");
       return;
     }
@@ -33,83 +42,74 @@ const Register = () => {
       setLoading(true);
 
       // 1) Firebase Auth 계정 생성
-      const { user } = await registerWithEmail(
-        emailRef.current,
-        passwordRef.current
-      );
+      const { user } = await registerWithEmail(email, password);
 
-      // 2) ID 토큰
+      // 2) ID 토큰 발급
       const token = await user.getIdToken(true);
 
-      // 3) 위치 동의 시에만 좌표 요청
-      let coords = null;
-      if (consent) {
-        try {
-          coords = await new Promise((resolve) => {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => resolve(pos.coords),
-              () => resolve(null),
-              { enableHighAccuracy: true, timeout: 10000 }
-            );
-          });
-        } catch {
-          coords = null;
-        }
-      }
-
-      // 4) 가입 API
-      const username = (userRef.current || "").trim();
-      if (!username) {
-        alert("이름(닉네임)을 입력해 주세요.");
-        return;
-      }
-
-      await axios.post(
-        "/api/users",
-        {
+      // 3) 백엔드 프로필 생성 요청
+      const resp = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
           username,
           bio: "",
           profileImageUrl: "",
-          locationConsent: consent,
-          lat: coords?.latitude,
-          lng: coords?.longitude,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        }),
+      });
 
-      alert("인증 메일을 발송했습니다. 메일을 확인하고 인증을 완료해 주세요.");
+      if (!resp.ok) {
+        const j = await resp.json().catch(() => ({}));
+        throw new Error(j?.message || `프로필 생성 실패 (${resp.status})`);
+      }
+
+      alert("인증 메일을 발송했습니다. 메일을 확인하고 인증을 완료해주세요.");
       navigate("/login");
     } catch (err) {
-      alert("회원가입 실패: " + err.message);
+      console.error("[Register] Error:", err);
+      alert("회원가입 실패: " + (err.message || "알 수 없는 오류"));
     } finally {
       setLoading(false);
     }
+  }, [navigate]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !loading) handleRegister();
   };
 
   return (
     <ScreenWrapper bg="white">
       <Header title="회원가입" showBack />
-      <div style={styles.loginContainer}>
+
+      <div style={styles.loginContainer} onKeyDown={handleKeyDown}>
         <div>
           <p style={styles.loginWelcomeText}>Let's</p>
           <p style={styles.loginWelcomeText}>Get Started</p>
         </div>
+
         <div style={styles.loginForm}>
           <p style={{ fontSize: hp(1.5), color: theme.colors.text }}>
             Please fill the details to create an account
           </p>
+
           <Input
             icon={<Icon name="User" size={26} strokeWidth={1.6} />}
             placeholder="Enter your name"
             onChange={(v) => (userRef.current = v?.target ? v.target.value : v)}
           />
+
           <Input
             icon={<Icon name="Mail" size={26} strokeWidth={1.6} />}
             placeholder="Enter your email"
+            keyboardType="email-address"
             onChange={(v) =>
               (emailRef.current = v?.target ? v.target.value : v)
             }
           />
+
           <Input
             icon={<Icon name="Lock" size={26} strokeWidth={1.6} />}
             placeholder="Enter your password"
@@ -118,6 +118,7 @@ const Register = () => {
               (passwordRef.current = v?.target ? v.target.value : v)
             }
           />
+
           <Input
             icon={<Icon name="Lock" size={26} strokeWidth={1.6} />}
             placeholder="Re-Enter your password"
@@ -127,34 +128,12 @@ const Register = () => {
             }
           />
 
-          {/* ✅ 위치 동의 체크박스 */}
-          <label
-            style={{
-              display: "flex",
-              gap: 8,
-              alignItems: "center",
-              marginTop: 12,
-              fontSize: hp(1.4),
-              color: theme.colors.text,
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-              style={{ cursor: "pointer" }}
-            />
-            로그인 시 보안 확인을 위해 위치 사용에 동의합니다
-          </label>
-
-          {/* 회원가입 버튼 */}
           <Button title="Sign up" loading={loading} onPress={handleRegister} />
         </div>
 
         <div style={styles.loginFooter}>
           <p style={{ ...styles.loginFooterText, margin: 0 }}>
-            Already have an account!&nbsp;
+            Already have an account?&nbsp;
           </p>
           <span
             onClick={() => navigate("/login")}

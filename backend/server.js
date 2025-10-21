@@ -9,6 +9,7 @@ const path = require("path");
 const multer = require('multer');
 const Post = require('./models/Post');
 const firebaseAuth = require('./middleware/firebaseAuth');
+
 const searchRoutes = require('./routes/searchRoutes');
 const commentRoutes = require("./routes/commentRoutes");
 const notificationsRouter = require("./routes/notificationRoutes");
@@ -22,7 +23,12 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 app.set("publicBaseUrl", PUBLIC_BASE_URL);
+const eekrewRoutes = require("./routes/eekrewRoutes");
+// 문제가 계속되면 아래 가드로 기본/디폴트 차이 모두 흡수
+const eekrewRouter = eekrewRoutes.default || eekrewRoutes;
 
+console.log("eekrewRouter typeof =", typeof eekrewRouter); // ✅ "function" 나와야 함
+app.use("/api/eekrew", eekrewRouter);
 const postRoutes = require('./routes/postRoutes');
 const userRoutes = require('./routes/userRoutes');
 

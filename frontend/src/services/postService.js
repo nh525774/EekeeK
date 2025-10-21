@@ -1,9 +1,19 @@
+// src/services/postService.js
 import axios from "axios";
 import { auth } from "../api/firebase";
 import { getIdToken } from "firebase/auth";
 
-// import { uploadFile } from "./imageService";
+// 공통: 선택적 토큰 첨부 (비로그인일 때도 안전하게 요청)
+const withAuth = async () => {
+  const u = auth.currentUser;
+  if (!u) return {};
+  const t = await getIdToken(u);
+  return { headers: { Authorization: `Bearer ${t}` } };
+};
 
+// =====================
+// 게시글 생성/수정
+// =====================
 export const createOrUpdatePost = async (post) => {
   try {
     const token = await getIdToken(auth.currentUser);
@@ -59,8 +69,11 @@ export const createOrUpdatePost = async (post) => {
       content: post.content || "",
       imageUrls,
       videoUrl,
-      visibility: post.visibility || "public",
-      eeKrewListId: post.eeKrewListId,
+      // visibility: "public" | "mutual" | "eekrew"
+      visibility: ["public","mutual","eekrew"].includes(post.visibility)
+        ? post.visibility
+        : "public",
+      eeKrewListId: post.eeKrewListId || null,
     };
 
     const res = await axios.post("/api/posts", newPostData, {
@@ -68,7 +81,7 @@ export const createOrUpdatePost = async (post) => {
     });
 
     return res.data?.success
-      ? { success: true, data: res.data }
+      ? { success: true, data: res.data.data }
       : { success: false, msg: res.data?.msg || "Post failed" };
   } catch (error) {
     console.error("createPost error:", error);
@@ -76,9 +89,13 @@ export const createOrUpdatePost = async (post) => {
   }
 };
 
+// =====================
+// 게시글 목록/상세/삭제
+// =====================
 export const fetchPosts = async (limit = 10) => {
   try {
-    const token = await auth.currentUser    ? await getIdToken(auth.currentUser)    : null;
+    const u = auth.currentUser;
+    const token = u ? await getIdToken(u) : null;
     const res = await axios.get(`/api/posts?limit=${limit}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
@@ -115,6 +132,9 @@ export const deletePostById = async (postId) => {
   });
 };
 
+// =====================
+// 좋아요
+// =====================
 export const createPostLike = async (postId) => {
   try {
     const token = await getIdToken(auth.currentUser);
@@ -151,6 +171,9 @@ export const removePostLike = async (postId) => {
   }
 };
 
+// =====================
+// 댓글
+// =====================
 export const createComment = async (postId, text) => {
   try {
     const token = await getIdToken(auth.currentUser);
@@ -167,7 +190,7 @@ export const createComment = async (postId, text) => {
     return { _error: true, msg: res.data?.msg || "댓글 작성 실패" };
   } catch (err) {
     console.error("comment error:", err);
-    return {  _error: true, msg: "댓글 작성 실패" };
+    return { _error: true, msg: "댓글 작성 실패" };
   }
 };
 
@@ -182,4 +205,39 @@ export const removeComment = async (postId, commentId) => {
     console.error("comment delete error:", err);
     return { success: false, msg: "댓글 삭제 실패" };
   }
+};
+
+// =====================
+// EEKREW (이크루) 전용 API
+// =====================
+
+// 1) 내 이크루 사용자 목록
+export const getMyEekrewUsers = async () => {
+  const cfg = await withAuth();
+  const { data } = await axios.get("/api/eekrew/my-users", cfg);
+  return data; // 서버: { success, users: [...] } 혹은 배열
+};
+
+// 2) 특정 유저가 내 이크루에 포함되어 있는지
+export const getIsInEekrew = async (userId) => {
+  const cfg = await withAuth();
+  const { data } = await axios.get(`/api/eekrew/is/${userId}`, cfg);
+  return !!data?.inEekrew;
+};
+
+// 3) 이크루 토글(추가/제거)
+export const toggleEekrew = async (userId) => {
+  const cfg = await withAuth();
+  const { data } = await axios.post(`/api/eekrew/toggle/${userId}`, null, cfg);
+  return !!data?.inEekrew;
+};
+
+// 4) 이크루 피드(내 이크루에 속한 사용자들의 공개/이크루-공개 글)
+//    백엔드 라우트: GET /api/eekrew/feed?limit=10
+export const fetchEekrewFeed = async (limit = 10) => {
+  const cfg = await withAuth();
+  const { data } = await axios.get(`/api/eekrew/feed?limit=${limit}`, cfg);
+  // 서버에서 접근 제어(visibility === 'eekrew' 포함) 후 반환한다고 가정
+  if (data?.success) return { success: true, data: data.data };
+  return { success: false, msg: data?.msg || "Eekrew feed fetch failed" };
 };

@@ -23,11 +23,7 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
     reasons.includes("RAPID_MOVE_24H_1000KM");
   const isNew = !!isNewDevice || reasons.includes("NEW_DEVICE");
 
-  // --- 레벨/메시지 결정 (요구사항)
-  // 안전(초록): 기본
-  // 주의(노랑): 급격한 좌표 이동(해외 등)
-  // 주의(주황): 새 디바이스
-  // 고위험(빨강): 새 디바이스 + 급격 좌표 이동
+  // --- 레벨/메시지 결정
   let level = "safe";
   let title = "✅ 계정은 안전합니다.";
   let detail = "국내 신뢰된 디바이스에서 로그인되었습니다.";
@@ -47,16 +43,14 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
   }
 
   // --- 로컬스토리지에 닫힘 상태 저장/복구 ---
-  const key = userId ? `eek_banner_close_v2_${userId}` : null; // v2: 레벨체계 변경
+  const key = userId ? `eek_banner_close_v2_${userId}` : null;
   useEffect(() => {
     if (!key) return;
     try {
       const raw = localStorage.getItem(key);
       if (!raw) return;
       const data = JSON.parse(raw);
-      // 고위험은 항상 표시
       if (level === "danger") return setVisible(true);
-      // 노랑/주황은 24시간 후 재표시
       if (level === "yellow" || level === "orange") {
         const ONE_DAY = 24 * 60 * 60 * 1000;
         if (Date.now() - (data.at || 0) < ONE_DAY) {
@@ -64,7 +58,6 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
         }
         return;
       }
-      // 안전은 닫힘 지속
       setVisible(!data.closed);
     } catch (e) {}
   }, [key, level]);
@@ -94,7 +87,7 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
       style={{
         padding: 12,
         margin: "8px 0 12px",
-        borderRadius: 10,
+        borderRadius: 12,
         fontWeight: 600,
         color: palette.fg,
         backgroundColor: palette.bg,
@@ -105,6 +98,7 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
         justifyContent: "space-between",
         gap: 8,
       }}
+      className="shadow-soft"
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span>{title}</span>
@@ -124,6 +118,7 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
           fontSize: 16,
           lineHeight: 1,
         }}
+        className="btn-ghost rounded-full px-2"
       >
         ✕
       </button>
@@ -196,8 +191,10 @@ const Home = () => {
   };
 
   useEffect(() => {
+    // auth가 준비되면(또는 바뀌면) 다시 로드 → mutual/eekrew 반영
     load(limit);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.currentUser?.uid]);
 
   const getPosts = async () => {
     if (!hasMore || loading) return;
@@ -250,80 +247,100 @@ const Home = () => {
 
   return (
     <ScreenWrapper bg="white">
-      <div style={styles.container}>
-        <div style={styles.header}>
-          <p style={styles.title}>EekeeK</p>
-          <div style={styles.icons}>
-            <span
-              onClick={() => navigate("/search")}
-              style={{ cursor: "pointer" }}
-            >
-              <Icon
-                name="Search"
-                size={hp(3.2)}
-                strokeWidth={2}
-                color={theme.colors.text}
-              />
-            </span>
-            <span
-              onClick={() => navigate("/notifications")}
-              style={{ cursor: "pointer" }}
-            >
-              <Icon
-                name="Heart"
-                size={hp(3.2)}
-                strokeWidth={2}
-                color={theme.colors.text}
-              />
-            </span>
-            <span
-              onClick={() => navigate("/uploadPage")}
-              style={{ cursor: "pointer" }}
-            >
-              <Icon
-                name="Plus"
-                size={hp(3.2)}
-                strokeWidth={2}
-                color={theme.colors.text}
-              />
-            </span>
-            <span
-              onClick={() => navigate("/profile")}
-              style={{ cursor: "pointer" }}
-            >
-              <img
-                key={avatarUrl}
-                src={avatarUrl}
-                alt="User avatar"
-                style={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: theme.radius?.sm || 8,
-                  border: "2px solid #ccc",
-                  objectFit: "cover",
-                }}
-              />
-              <span style={{ fontWeight: 600 }}>{headerName}</span>
-            </span>
+      {/* ---- Modern wrapper: 전역 배경/여백(기능 영향 없음) ---- */}
+      <div className="min-h-[80vh] bg-gradient-to-br from-background via-muted/30 to-background text-foreground">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* 상단 헤더바 (기존 inline 스타일 유지 + 보조 클래스만 추가) */}
+          <div
+            style={styles.header}
+            className="header-blur rounded-2xl py-3 px-4 mb-4"
+          >
+            <p style={styles.title} className="font-semibold tracking-tight">
+              EekeeK
+            </p>
+
+            <div style={styles.icons} className="gap-4 sm:gap-6">
+              <span
+                onClick={() => navigate("/search")}
+                style={{ cursor: "pointer" }}
+                className="btn-ghost rounded-xl p-1"
+              >
+                <Icon
+                  name="Search"
+                  size={hp(3.2)}
+                  strokeWidth={2}
+                  color={theme.colors.text}
+                />
+              </span>
+              <span
+                onClick={() => navigate("/notifications")}
+                style={{ cursor: "pointer" }}
+                className="btn-ghost rounded-xl p-1"
+              >
+                <Icon
+                  name="Heart"
+                  size={hp(3.2)}
+                  strokeWidth={2}
+                  color={theme.colors.text}
+                />
+              </span>
+              <span
+                onClick={() => navigate("/uploadPage")}
+                style={{ cursor: "pointer" }}
+                className="btn-ghost rounded-xl p-1"
+              >
+                <Icon
+                  name="Plus"
+                  size={hp(3.2)}
+                  strokeWidth={2}
+                  color={theme.colors.text}
+                />
+              </span>
+              <span
+                onClick={() => navigate("/profile")}
+                style={{ cursor: "pointer" }}
+                className="flex items-center gap-2"
+              >
+                <img
+                  key={avatarUrl}
+                  src={avatarUrl}
+                  alt="User avatar"
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: theme.radius?.sm || 8,
+                    border: "1px solid hsl(var(--border))",
+                    objectFit: "cover",
+                  }}
+                  className="shadow-soft"
+                />
+                <span className="hidden sm:inline font-semibold">
+                  {headerName}
+                </span>
+              </span>
+            </div>
+          </div>
+
+          {/* ✅ 보안 배너 */}
+          <RiskPersistentBanner
+            risk={risk}
+            isNewDevice={isNewDevice}
+            userId={auth.currentUser?.uid}
+          />
+
+          {/* 피드 영역 */}
+          <div className="card-glass shadow-soft border-gradient rounded-2xl p-4 sm:p-6">
+            <PostList
+              posts={posts}
+              currentUser={authUser}
+              navigate={navigate}
+              isLoading={loading}
+              loadMore={getPosts}
+              hasMore={hasMore}
+              meId={me?.id}
+            />
           </div>
         </div>
-
-        {/* ✅ 항상 보이는 로그인/보안 상태 배너 (닫기 버튼 포함) */}
-        <RiskPersistentBanner
-          risk={risk}
-          isNewDevice={isNewDevice}
-          userId={auth.currentUser?.uid}
-        />
-
-        <PostList
-          posts={posts}
-          currentUser={authUser}
-          navigate={navigate}
-          isLoading={loading}
-          loadMore={getPosts}
-          hasMore={hasMore}
-          meId={me?.id}
-        />
       </div>
     </ScreenWrapper>
   );
@@ -343,7 +360,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 10,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary, // 기존 색 유지 (theme.css와 섞여도 OK)
     paddingLeft: wp(4),
     paddingRight: wp(4),
   },

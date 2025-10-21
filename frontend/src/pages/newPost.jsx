@@ -92,7 +92,8 @@ const NewPost = () => {
         content: bodyRef.current || "",
         files, // Blob/File 또는 "/static/..." 문자열 포함
         file: location.state?.file,
-        visibility, // "public" | "mutual" | "eeKrew" (서비스가 지원하면 활용)
+        visibility, // "public" | "mutual" | "eekrew" (서비스가 지원하면 활용)
+        eeKrewListID: null, //or 선택된 ID
       });
 
       if (!result.success) {
@@ -170,7 +171,7 @@ const NewPost = () => {
               >
                 <option value="public">Public</option>
                 <option value="mutual">Mutual</option>
-                <option value="eeKrew">eeKrew</option>
+                <option value="eekrew">EeKrew</option>
               </select>
             </div>
           </div>

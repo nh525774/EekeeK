@@ -1,4 +1,3 @@
-// src/pages/PostDetails.jsx
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -89,13 +88,11 @@ const PostDetails = () => {
     if (!commentText.trim()) return;
     const res = await createComment(postId, commentText);
     if (!res?._error && res?._id) {
-      // 성공: res는 "댓글 객체" (contentForViewer 포함)
       setPost((prev) =>
         prev ? { ...prev, comments: [...(prev.comments || []), res] } : prev
       );
       setCommentText("");
 
-      // 알림 유지 로직
       if (post?.userId) {
         const token = await auth.currentUser.getIdToken();
         await axios.post(
@@ -127,17 +124,18 @@ const PostDetails = () => {
   };
 
   return (
-    <div style={{ maxWidth: 600, margin: "0 auto" }}>
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background text-foreground">
       <Header title="게시물" showBack />
-      <div style={{ padding: 20 }}>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {status !== "ok" ? (
-          <div>
+          <div className="card-glass shadow-soft rounded-2xl p-6 text-center">
             {status === "loading"
               ? "로딩 중..."
               : error || "문제가 발생했습니다."}
           </div>
         ) : (
           <>
+            {/* 본문 카드 */}
             <PostCard
               item={post}
               currentUser={user}
@@ -146,37 +144,43 @@ const PostDetails = () => {
             />
 
             {/* 댓글 입력 */}
-            <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-              <input
-                type="text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Type comment..."
-                style={{
-                  flex: 1,
-                  padding: 10,
-                  borderRadius: 8,
-                  border: "1px solid #e5e7eb",
-                  outline: "none",
-                }}
-              />
-              <button
-                onClick={handleAddComment}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: "1px solid #e5e7eb",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  background: "#fff",
-                }}
-              >
-                등록
-              </button>
+            <div className="card-glass shadow-soft rounded-2xl p-4 sm:p-5 mt-4">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Type comment..."
+                  style={{
+                    flex: 1,
+                    padding: 10,
+                    borderRadius: 10,
+                    border: "1px solid hsl(var(--border))",
+                    outline: "none",
+                    background: "transparent",
+                    color: "hsl(var(--foreground))",
+                  }}
+                  className="focus:ring-2 focus:ring-primary/30"
+                />
+                <button
+                  onClick={handleAddComment}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    border: "1px solid hsl(var(--border))",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    background: "transparent",
+                  }}
+                  className="btn-ghost"
+                >
+                  등록
+                </button>
+              </div>
             </div>
 
             {/* 댓글 리스트 */}
-            <div style={{ marginTop: 15 }}>
+            <div className="mt-4 space-y-2">
               {comments.length > 0 ? (
                 comments.map((comment, idx) => (
                   <CommentItem
@@ -185,7 +189,7 @@ const PostDetails = () => {
                       `${comment.userId}-${comment.createdAt ?? ""}-${idx}`
                     }
                     item={comment}
-                    displayText={comment.contentForViewer ?? comment.text ?? ""} // ⬅️ 상태표시용(선택)
+                    displayText={comment.contentForViewer ?? comment.text ?? ""}
                     canDelete={
                       (user?.uid && comment.userId === user.uid) ||
                       (meId && String(post.userId) === String(meId))
@@ -194,7 +198,7 @@ const PostDetails = () => {
                   />
                 ))
               ) : (
-                <p>첫 댓글을 남겨 보세요!</p>
+                <p className="text-muted-foreground">첫 댓글을 남겨 보세요!</p>
               )}
             </div>
           </>

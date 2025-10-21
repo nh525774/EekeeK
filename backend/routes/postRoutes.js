@@ -78,9 +78,14 @@ async function canViewPost(postDoc, viewerId) {
   if (viewerId && String(viewerId) === String(authorId)) return true;
   if (vis === "public") return true;
   if (!viewerId) return false;
-
   if (vis === "mutual") return isMutual(viewerId, authorId);
-  if (vis === "eeKrew") return false; // TODO: 리스트 구현 시 교체
+  if (vis === "eekrew") {
+  const author = await User.findById(authorId).select("eekrewUserIds").lean();
+  if (!author) return false;
+  return (author.eekrewUserIds || [])
+    .map(String)
+    .includes(String(viewerId));
+}
   return true;
 }
 
@@ -99,7 +104,7 @@ router.post("/", firebaseAuth, async (req, res) => {
       imageUrls: imageUrls || [],
       videoUrl: videoUrl || "",
       visibility: visibility || "public",
-      eeKrewListId: visibility === "eeKrew" ? eeKrewListId || null : undefined,
+      eeKrewListId: visibility === "eekrew" ? eeKrewListId || null : undefined,
     });
 
     const saved = await Post.findById(post._id).populate("userId", "username profileImageUrl");

@@ -14,12 +14,12 @@ const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const toAbs = (u) =>
   typeof u === "string" && !u.startsWith("http") ? baseUrl + u : u;
 
+// ✅ 스타일: 배경/보더를 투명/미니멀로 조정 (글래스 유틸이 담당)
 const styles = {
   container: {
-    backgroundColor: "#fff",
+    backgroundColor: "transparent",
     borderRadius: "16px",
     padding: "16px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
     marginBottom: "16px",
     display: "flex",
     flexDirection: "column",
@@ -41,7 +41,7 @@ const styles = {
     height: hp(4.5),
     borderRadius: "50%",
     objectFit: "cover",
-    border: "1px solid #ddd",
+    border: "1px solid hsl(var(--border))",
   },
   username: {
     fontSize: hp(1.7),
@@ -54,7 +54,7 @@ const styles = {
     color: theme.colors.textLight,
     margin: 0,
   },
-  postBody: { color: "#333", fontSize: hp(1.6) },
+  postBody: { color: "hsl(var(--foreground))", fontSize: hp(1.6) },
   media: { width: "100%", borderRadius: "12px", objectFit: "cover" },
   footer: {
     display: "flex",
@@ -167,26 +167,41 @@ const PostCard = ({
       const url = toAbs(urls[0]);
       return isVideoUrl(url) ? (
         <div style={{ position: "relative" }}>
-    <video
-      key={url}
-      src={url}
-      preload="metadata"
-      playsInline
-      muted
-      loop
-      autoPlay
-      crossOrigin="anonymous"
-      style={styles.media}
-      onError={() => {}}
-    />
-    <span style={{
-      position: "absolute", left: 8, bottom: 8, fontSize: 10,
-      background: "rgba(0,0,0,0.55)", color: "#fff",
-      padding: "2px 6px", borderRadius: 6, pointerEvents: "none"
-    }}>VIDEO</span>
-  </div>
+          <video
+            key={url}
+            src={url}
+            preload="metadata"
+            playsInline
+            muted
+            loop
+            autoPlay
+            crossOrigin="anonymous"
+            style={styles.media}
+            onError={() => {}}
+            className="shadow-soft"
+          />
+          <span
+            style={{
+              position: "absolute",
+              left: 8,
+              bottom: 8,
+              fontSize: 10,
+              background: "rgba(0,0,0,0.55)",
+              color: "#fff",
+              padding: "2px 6px",
+              borderRadius: 6,
+              pointerEvents: "none",
+            }}
+          >
+            VIDEO
+          </span>
+        </div>
       ) : (
-        <img src={url} style={{ ...styles.media, maxHeight: "400px" }} />
+        <img
+          src={url}
+          style={{ ...styles.media, maxHeight: "400px" }}
+          className="shadow-soft"
+        />
       );
     }
 
@@ -196,46 +211,80 @@ const PostCard = ({
         style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}
       >
         {urls.map((u, i) => {
-  const url = toAbs(u);
-  return isVideoUrl(url) ? (
-    <div key={i} style={{ position: "relative" }}>
-      <video
-        src={url}
-        preload="metadata"
-        playsInline
-        muted
-        loop
-        autoPlay
-        crossOrigin="anonymous"
-        style={{ width: "100%", borderRadius: 12 }}
-        onError={() => {}}
-      />
-      <span style={{
-        position: "absolute", left: 6, bottom: 6, fontSize: 10,
-        background: "rgba(0,0,0,0.55)", color: "#fff",
-        padding: "2px 6px", borderRadius: 6, pointerEvents: "none"
-      }}>VIDEO</span>
-    </div>
-  ) : (
-    <img key={i} src={url} style={{ width: "100%", borderRadius: 12 }} />
-  );
-})}
-
+          const url = toAbs(u);
+          return isVideoUrl(url) ? (
+            <div key={i} style={{ position: "relative" }}>
+              <video
+                src={url}
+                preload="metadata"
+                playsInline
+                muted
+                loop
+                autoPlay
+                crossOrigin="anonymous"
+                style={{ width: "100%", borderRadius: 12 }}
+                onError={() => {}}
+                className="shadow-soft"
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  left: 6,
+                  bottom: 6,
+                  fontSize: 10,
+                  background: "rgba(0,0,0,0.55)",
+                  color: "#fff",
+                  padding: "2px 6px",
+                  borderRadius: 6,
+                  pointerEvents: "none",
+                }}
+              >
+                VIDEO
+              </span>
+            </div>
+          ) : (
+            <img
+              key={i}
+              src={url}
+              style={{ width: "100%", borderRadius: 12 }}
+              className="shadow-soft"
+            />
+          );
+        })}
       </div>
     );
   };
 
   return (
-    <div style={styles.container} onClick={handleClick}>
+    <div
+      style={styles.container}
+      onClick={handleClick}
+      className="card-glass shadow-soft border-gradient rounded-2xl p-4 sm:p-6 transition hover:shadow-lg"
+    >
       {/* header */}
       <div style={styles.header}>
         <div style={styles.userInfo}>
-          <button onClick={goProfile} style={{ all: "unset", cursor: "pointer" }}>
-            <img src={userImage} alt="avatar" style={styles.avatar} />
+          <button
+            onClick={goProfile}
+            style={{ all: "unset", cursor: "pointer" }}
+          >
+            <img
+              src={userImage}
+              alt="avatar"
+              style={styles.avatar}
+              className="shadow-soft"
+            />
           </button>
-          <button onClick={goProfile} style={{ all: "unset", cursor: "pointer" }}>
-            <p style={styles.username}>{userName}</p>
-            <p style={styles.postTime}>{postDate}</p>
+          <button
+            onClick={goProfile}
+            style={{ all: "unset", cursor: "pointer" }}
+          >
+            <p style={styles.username} className="text-foreground">
+              {userName}
+            </p>
+            <p style={styles.postTime} className="text-muted-foreground">
+              {postDate}
+            </p>
           </button>
         </div>
 
@@ -247,6 +296,8 @@ const PostCard = ({
                 e.stopPropagation();
                 setShowMenu((prev) => !prev);
               }}
+              className="btn-ghost rounded-md px-2"
+              title="more"
             >
               ⋮
             </span>
@@ -254,21 +305,18 @@ const PostCard = ({
               <div
                 style={{
                   position: "absolute",
-                  top: "24px",
+                  top: "28px",
                   right: 0,
-                  background: "#fff",
-                  border: "1px solid #ccc",
-                  borderRadius: "6px",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
                   zIndex: 99,
-                  minWidth: "100px",
-                  padding: "4px 0",
+                  minWidth: "120px",
                 }}
+                className="card-glass shadow-soft rounded-xl border border-border overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
               >
                 <button
                   onClick={handleDelete}
                   style={{
-                    padding: "8px 16px",
+                    padding: "10px 14px",
                     background: "none",
                     border: "none",
                     display: "flex",
@@ -281,6 +329,7 @@ const PostCard = ({
                     cursor: "pointer",
                     fontSize: "14px",
                   }}
+                  className="hover:bg-muted/40"
                 >
                   삭제
                 </button>
@@ -291,7 +340,11 @@ const PostCard = ({
       </div>
 
       {/* body */}
-      {item.content && <div style={styles.postBody}>{item.content}</div>}
+      {item.content && (
+        <div style={styles.postBody} className="leading-relaxed">
+          {item.content}
+        </div>
+      )}
 
       {/* media */}
       {(() => {
@@ -304,7 +357,11 @@ const PostCard = ({
 
       {/* footer */}
       <div style={styles.footer}>
-        <button style={styles.iconButton} onClick={handleLike}>
+        <button
+          style={styles.iconButton}
+          onClick={handleLike}
+          className="btn-ghost rounded-xl px-2"
+        >
           <Heart
             width={22}
             height={22}
@@ -314,7 +371,11 @@ const PostCard = ({
           <span style={styles.count}>{likeCount}</span>
         </button>
 
-        <button style={styles.iconButton} onClick={openPostDetails}>
+        <button
+          style={styles.iconButton}
+          onClick={openPostDetails}
+          className="btn-ghost rounded-xl px-2"
+        >
           <Comment
             width={22}
             height={22}
@@ -324,7 +385,7 @@ const PostCard = ({
           <span style={styles.count}>{item.comments?.length || 0}</span>
         </button>
 
-        <button style={styles.iconButton}>
+        <button style={styles.iconButton} className="btn-ghost rounded-xl px-2">
           <Share
             width={22}
             height={22}
