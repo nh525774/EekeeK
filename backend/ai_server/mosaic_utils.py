@@ -1,34 +1,31 @@
 from PIL import Image, ImageOps
-import cv2
-
 
 def apply_mosaic(image_path, boxes, save_path, block_size=None):
     """
-    공통 모자이크 처리 (대상 상관없이 모두 Pillow 기반 모자이크)
-    :param image_path: 원본 이미지 경로
-    :param boxes: 모자이크할 영역 리스트 [(x1, y1, x2, y2), ...]
-    :param block_size: (옵션) 전체 박스에 적용할 픽셀화 블록 크기(정수, 홀수 권장)
-    :param save_path: 저장 경로
-    :return: 저장된 이미지 경로
+    boxes: [[x1,y1,x2,y2], ...] (xyxy)
+    block_size: 모자이크 강도에 쓰는 정수값 (클수록 약해짐 — 예전 방식)
     """
-    img = Image.open(image_path).convert('RGB')
-    img = ImageOps.exif_transpose(img).convert("RGB")
+    # (예전 스타일대로 간단히) EXIF만 반영하고 RGB로 변환
+    img = ImageOps.exif_transpose(Image.open(image_path)).convert("RGB")
+    W, H = img.size
 
-    for box in boxes:
-        left, upper, right, lower = [int(v) for v in box]
-        region = img.crop((left, upper, right, lower))
-        box_width = right - left
-        box_height = lower - upper
-        # 전달받은 block_size가 있으면 그 값을, 없으면 기존 방식으로 계산
-        bs = int(block_size) if block_size else int(max(8, min(box_width, box_height) // 2))
-        # 모자이크는 홀수일 때 더 깔끔한 경우가 많음
-        if bs % 2 == 0:
-            bs += 1
-        bs = max(3, bs)
+    def clamp_xyxy(x1, y1, x2, y2):
+        x1 = max(0, min(int(x1), W - 1))
+        y1 = max(0, min(int(y1), H - 1))
+        x2 = max(x1 + 1, min(int(x2), W))
+        y2 = max(y1 + 1, min(int(y2), H))
+        return x1, y1, x2, y2
 
+    bs = int(block_size) if block_size else 15
+    bs = max(1, bs)  # 1이하는 무의미
+
+    for b in boxes:
+        x1, y1, x2, y2 = clamp_xyxy(*b)
+        region = img.crop((x1, y1, x2, y2))
+        # 예전 방식: 정사각형으로 줄였다가 최근접 확대
         small = region.resize((bs, bs), resample=Image.BILINEAR)
         mosaic = small.resize(region.size, Image.NEAREST)
-        img.paste(mosaic, (left, upper, right, lower))
+        img.paste(mosaic, (x1, y1, x2, y2))
 
     img.save(save_path)
     return save_path

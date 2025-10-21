@@ -15,6 +15,7 @@ venv/
 *.onnx
 *.tflite
 *.pb
+*.safetensors
 runs/
 output/
 models/

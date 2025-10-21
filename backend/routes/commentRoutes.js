@@ -48,7 +48,7 @@ router.get("/", firebaseAuth, async (req, res) => {
         if (Array.isArray(c.piiHits) && c.piiHits.length) {
           contentForViewer = maskByHits(c.text || "", c.piiHits);
         } else {
-          // 과거 댓글처럼 piiHits 없는 경우엔 원문 그대로(폴백) 또는 필요시 빠른 정규식 마스킹 적용 가능
+          // piiHits 없는 경우엔 원문 그대로(폴백) 또는 필요시 빠른 정규식 마스킹 적용 가능
           // contentForViewer = maskByHits(c.text || "", normalizeHits(c.text || "", quickRegexScan(c.text || "")));
         }
       }
@@ -100,9 +100,13 @@ router.post("/", firebaseAuth, async (req, res) => {
       ? await User.find({ $or: ors }).select("_id username firebaseUid").lean()
       : [];
 
-    // 🔎 NER 실행 → 범위 정규화
-    const scan = await scanTextWithPy(text);
-    const piiHits = normalizeHits(text, scan.hits || []);
+    // 멘션이 있을 때만 ner 스캔 (멘션 없는 일반 댓글은 스킵)
+    let scan = { hits: [], error: null, skipped: "no-mention", fallback: null };
+    let piiHits = [];
+    if (mentionedUsers.length) {
+      scan = await scanTextWithPy(text);
+      piiHits = normalizeHits(text, scan.hits || []);
+    }
 
     const newComment = {
       _id: new Types.ObjectId(),
@@ -122,7 +126,7 @@ router.post("/", firebaseAuth, async (req, res) => {
         fallback: scan.fallback,
       },
     };
-    console.log("[PII]", { hitCount: piiHits.length, error: scan.error, fallback: scan.fallback, skipped: scan.skipped });
+    console.log("[PII]", { hitCount: piiHits.length,  mode: mentionedUsers.length ? "scan" : "skip(no-mention)", error: scan.error, fallback: scan.fallback, skipped: scan.skipped });
     const upd = await Post.updateOne(
       { _id: postId },
       { $push: { comments: newComment } }
@@ -146,7 +150,7 @@ router.post("/", firebaseAuth, async (req, res) => {
       if (docs.length) await Notification.insertMany(docs);
     }
 
-    // 작성자 본인에게는 원문을 돌려주자(UX)
+    // 작성자 본인에게는 원문(UX)
     return res.json({
       success: true,
       data: {
