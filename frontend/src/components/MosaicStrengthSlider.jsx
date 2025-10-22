@@ -17,7 +17,7 @@ export default function MosaicStrengthSlider({
   label = "모자이크 강도",
   disabled = false,
   id = "mosaic-strength",
-  trackColor = "#f7d0d6", // 분홍 필
+  trackColor = "#B3F2EC", // 분홍 필
   showDots = true,
   showLabels = true,
   tickValues = [0, 25, 50, 75, 100],
@@ -61,7 +61,7 @@ export default function MosaicStrengthSlider({
             transform: "translateY(-50%)",
             height: railH,
             borderRadius: 9999,
-            background: "#e5e7eb", // gray-200
+            background: "#F2F2F2", // gray-200
           }}
         />
 
@@ -76,7 +76,7 @@ export default function MosaicStrengthSlider({
             height: railH,
             width: `${pct}%`,
             borderRadius: 9999,
-            background: `linear-gradient(180deg, ${trackColor}, #f6b6c0)`,
+            background: `linear-gradient(180deg, ${trackColor}, #B3F2EC)`,
           }}
         />
 

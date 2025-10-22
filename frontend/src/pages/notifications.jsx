@@ -42,14 +42,18 @@ const Notifications = () => {
   return (
     <ScreenWrapper bg="white">
       <Header title="Notifications" showBack />
-      <div className="min-h-[70vh] bg-gradient-to-br from-background via-muted/30 to-background text-foreground">
+
+      {/* 헤더 아래 여백 추가 (pt-8 등으로 조정 가능) */}
+      <div className="min-h-[70vh] bg-gradient-to-br from-background via-muted/30 to-background text-foreground pt-8">
+        {/* 내부 패딩도 살짝 늘림 */}
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {loading ? (
             <p className="text-muted-foreground">불러오는 중…</p>
           ) : items.length === 0 ? (
             <p className="text-muted-foreground">알림이 없습니다.</p>
           ) : (
-            <div className="space-y-3">
+            // 알림 간격 넓히기 (space-y-3 → space-y-5)
+            <div className="space-y-5">
               {items.map((n) => (
                 <div
                   key={n._id}

@@ -43,24 +43,25 @@ function MainPage() {
     return <div className="p-4">로그인 사용자 정보를 불러오는 중...</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background text-foreground">
+    <div className="min-h-screen bg-white text-foreground">
       <main className="flex">
         {/* 사이드바 */}
-        <aside className="h-screen w-24 border-r border-border bg-muted/20 shrink-0 header-blur">
+        <aside className="h-screen w-24 border-r border-border bg-muted/20 shrink-0">
           <Sidebar />
         </aside>
 
         {/* 메인 피드 */}
         <section className="flex-1">
-          <div className="border-b border-border p-3 header-blur">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              EekeeK
-            </h1>
+          {/* 상단바: 위에 딱 붙게 */}
+          <div className="fixed top-0 left-24 right-0 z-50 bg-white border-b border-border px-4 py-2">
+            <h1 className="text-2xl font-semibold tracking-tight">EekeeK</h1>
           </div>
+          {/* 헤더 높이만큼 스페이서 */}
+          <div className="h-[48px]" />
 
           <div className="flex justify-center">
-            <div className="w-full max-w-xl p-4 sm:p-6 space-y-6">
-              <div className="card-glass shadow-soft border-gradient rounded-2xl p-4 sm:p-6">
+            <div className="w-full max-w-xl px-0 sm:px-0 space-y-6">
+              <div className="rounded-2xl p-0">
                 {/* 게시글 카드 출력 */}
                 {posts.map((post) => (
                   <PostCard key={post._id} item={post} currentUser={user} />

@@ -35,7 +35,7 @@ export default function EekrewList() {
           alignItems: "center",
           justifyContent: "space-between",
           marginBottom: 16,
-          background: "#d3f3a1",
+          background: "#00C5C5",
           borderRadius: 12,
           padding: "10px 14px",
         }}

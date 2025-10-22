@@ -27,7 +27,7 @@ function EekrewSelfButton({ onClick, compact = false }) {
         borderRadius: 999,
         border: "1px solid #e5e7eb",
         fontWeight: 700,
-        background: "#ECFDF5",
+        background: "#B3F2EC",
         color: "#14532d",
         boxShadow: "0 1px 6px rgba(16,185,129,.25)",
         cursor: "pointer",
@@ -90,7 +90,7 @@ function EekrewToggleButton({ targetUserId, getAuthHeaders, compact = false }) {
         borderRadius: 999,
         border: "1px solid #e5e7eb",
         fontWeight: 700,
-        background: active ? "#ECFDF5" : "#fff", // 채움/비활성
+        background: active ? "#B3F2EC" : "#fff", // 채움/비활성
         color: active ? "#14532d" : "#111827",
         boxShadow: active ? "0 1px 6px rgba(16,185,129,.25)" : "none",
         opacity: loading ? 0.6 : 1,
@@ -117,7 +117,7 @@ const Profile = () => {
   const [posts, setPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(true);
 
-   const isVideoUrl = (u) => /\.(mp4|webm|ogg)(\?.*)?$/i.test(String(u || ""));
+  const isVideoUrl = (u) => /\.(mp4|webm|ogg)(\?.*)?$/i.test(String(u || ""));
 
   // Firebase가 사용자 로딩을 끝낼 때까지 기다림
   const waitForUser = (timeoutMs = 3000) =>
@@ -192,23 +192,35 @@ const Profile = () => {
       return p.files[0]?.url || p.files[0];
     if (typeof p.videoUrl === "string" && p.videoUrl) return p.videoUrl;
     if (typeof p.video === "string" && p.video) return p.video;
-    if (typeof p.processedVideoUrl === "string" && p.processedVideoUrl) return p.processedVideoUrl;
+    if (typeof p.processedVideoUrl === "string" && p.processedVideoUrl)
+      return p.processedVideoUrl;
     // 본문에 경로가 들어있는 케이스(예: content가 /uploads/...mp4)
-    if (typeof p.content === "string" && /\.(mp4|webm|ogg)(\?.*)?$/i.test(p.content)) return p.content;
+    if (
+      typeof p.content === "string" &&
+      /\.(mp4|webm|ogg)(\?.*)?$/i.test(p.content)
+    )
+      return p.content;
     return null;
   };
   const toMediaUrl = (v) => {
-   if (!v) return null;
-   if (typeof v === "object") {
-     v = v.url || v.downloadURL || v.src || v.path || v.location || v.key || null;
-   }
-   if (!v) return null;
-   v = String(v).replace(/\\/g, "/");
-   if (/^(https?:|blob:|data:)/i.test(v)) return v; // 절대/blob/data 그대로
-   const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-   const path = v.startsWith("/") ? v : `/${v}`;     // /uploads/... 보장
-   return baseUrl + path;                            // 백엔드 프록시로 이동
- };
+    if (!v) return null;
+    if (typeof v === "object") {
+      v =
+        v.url ||
+        v.downloadURL ||
+        v.src ||
+        v.path ||
+        v.location ||
+        v.key ||
+        null;
+    }
+    if (!v) return null;
+    v = String(v).replace(/\\/g, "/");
+    if (/^(https?:|blob:|data:)/i.test(v)) return v; // 절대/blob/data 그대로
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    const path = v.startsWith("/") ? v : `/${v}`; // /uploads/... 보장
+    return baseUrl + path; // 백엔드 프록시로 이동
+  };
 
   // 내 프로필 불러오기
   const fetchMe = async () => {
@@ -434,7 +446,7 @@ const Profile = () => {
             {posts.map((p) => {
               const id = p?._id || p?.id;
               const raw = getThumb(p);
-              const src = toMediaUrl(raw)
+              const src = toMediaUrl(raw);
               return (
                 <div
                   key={id}
@@ -443,33 +455,46 @@ const Profile = () => {
                 >
                   {src ? (
                     isVideoUrl(raw) ? (
-                     <div style={{position:"relative"}}>
-       <video
-         src={src}
-         style={styles.gridImg}
-         preload="metadata"
-         playsInline
-         muted
-         onError={()=>console.warn("video thumb load error:", src)}
-       />
-       {/* 재생 아이콘 살짝 오버레이 (선택) */}
-       <div style={{
-         position:"absolute", right:6, bottom:6,
-         background:"rgba(0,0,0,.55)", color:"#fff",
-         fontSize:10, padding:"2px 6px", borderRadius:6
-       }}>VIDEO</div>
-     </div>
-   ) : (
-     <img
-       src={src}
-       alt=""
-       style={styles.gridImg}
-       onError={()=>console.warn("img thumb load error:", src)}
-     />
-   )
- ) : (
-   <div style={styles.gridPlaceholder} />
- )}
+                      <div style={{ position: "relative" }}>
+                        <video
+                          src={src}
+                          style={styles.gridImg}
+                          preload="metadata"
+                          playsInline
+                          muted
+                          onError={() =>
+                            console.warn("video thumb load error:", src)
+                          }
+                        />
+                        {/* 재생 아이콘 살짝 오버레이 (선택) */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            right: 6,
+                            bottom: 6,
+                            background: "rgba(0,0,0,.55)",
+                            color: "#fff",
+                            fontSize: 10,
+                            padding: "2px 6px",
+                            borderRadius: 6,
+                          }}
+                        >
+                          VIDEO
+                        </div>
+                      </div>
+                    ) : (
+                      <img
+                        src={src}
+                        alt=""
+                        style={styles.gridImg}
+                        onError={() =>
+                          console.warn("img thumb load error:", src)
+                        }
+                      />
+                    )
+                  ) : (
+                    <div style={styles.gridPlaceholder} />
+                  )}
                 </div>
               );
             })}
@@ -682,7 +707,7 @@ export const styles = {
   },
 
   followButton: {
-    backgroundColor: theme.colors.hotpink,
+    backgroundColor: theme.colors.primary,
     color: "white",
     border: "none",
     borderRadius: 20,

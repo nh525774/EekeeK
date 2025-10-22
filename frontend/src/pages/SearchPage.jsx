@@ -51,6 +51,7 @@ export default function SearchPage() {
               fontWeight: theme.fonts.bold,
               fontSize: 20,
               marginBottom: 12,
+              marginTop: 24,
             }}
             className="text-foreground"
           >
@@ -75,7 +76,7 @@ export default function SearchPage() {
                   padding: "10px 12px",
                   outline: "none",
                   background: "transparent",
-                  color: "hsl(var(--foreground))",
+                  color: "#04BFAD",
                 }}
                 className="focus:ring-2 focus:ring-primary/30"
               />
@@ -85,8 +86,8 @@ export default function SearchPage() {
                   border: "1px solid hsl(var(--border))",
                   borderRadius: theme.radius.md,
                   padding: "10px 14px",
-                  background: "transparent",
-                  color: "hsl(var(--foreground))",
+                  background: "#B3F2EC",
+                  color: "hsl(var(--border))",
                   cursor: "pointer",
                   fontWeight: 600,
                 }}

@@ -158,7 +158,7 @@ const EditProfile = () => {
             padding: "12px 16px",
             borderRadius: 12,
             border: "1px solid hsl(var(--border))",
-            background: "transparent",
+            background: "#00C5C5",
             color: "hsl(var(--foreground))",
             fontWeight: 700,
             cursor: "pointer",

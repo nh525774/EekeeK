@@ -248,22 +248,43 @@ const Home = () => {
   return (
     <ScreenWrapper bg="white">
       {/* ---- Modern wrapper: 전역 배경/여백(기능 영향 없음) ---- */}
-      <div className="min-h-[80vh] bg-gradient-to-br from-background via-muted/30 to-background text-foreground">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="min-h-screen bg-white text-foreground">
+        <div className="w-full mx-0 px-0 py-0">
           {/* 상단 헤더바 (기존 inline 스타일 유지 + 보조 클래스만 추가) */}
           <div
-            style={styles.header}
-            className="header-blur rounded-2xl py-3 px-4 mb-4"
+            style={{
+              ...styles.header,
+              position: "sticky", // ✅ 스크롤해도 위에 고정
+              top: 0,
+              backdropFilter: "blur(12px)", // ✅ 배경 블러
+              backgroundColor: "rgba(255,255,255,0.2)", // ✅ 반투명 흰색 배경
+              zIndex: 1000,
+            }}
+            className="header-blur flex items-center justify-start py-4 pl-4 pr-1 border-b border-border shadow-sm"
           >
-            <p style={styles.title} className="font-semibold tracking-tight">
-              EekeeK
-            </p>
+            <img
+              src="/src/assets/logo3.png"
+              alt="EekeeK Logo"
+              style={{
+                height: 56,
+                objectFit: "contain",
+                marginTop: 0,
+                display: "block", // 인라인 이미지의 baseline 여백 제거
+                transform: "translateY(-2px)",
+              }}
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: "smooth" }); // ✅ 부드럽게 맨 위로 이동
+              }}
+            />
 
-            <div style={styles.icons} className="gap-4 sm:gap-6">
+            <div
+              style={styles.icons}
+              className="flex h-14 items-center gap-3 sm:gap-6 ml-auto justify-start mr-4"
+            >
               <span
                 onClick={() => navigate("/search")}
                 style={{ cursor: "pointer" }}
-                className="btn-ghost rounded-xl p-1"
+                className="btn-ghost rounded-xl p-0 h-10 w-10 flex items-center justify-center leading-none"
               >
                 <Icon
                   name="Search"
@@ -354,15 +375,25 @@ const styles = {
     flex: 1,
     flexDirection: "column",
   },
-  header: {
+  hheader: {
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
-    backgroundColor: theme.colors.primary, // 기존 색 유지 (theme.css와 섞여도 OK)
+    position: "fixed", // 상단 고정
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000, // 피드 위에 항상 보이게
+    height: 56, // 헤더 높이 (h-[56px]과 맞춤)
+    backgroundColor: theme.colors.primary, // 기존 브랜드 컬러 유지 (#c0d86e 등)
     paddingLeft: wp(4),
     paddingRight: wp(4),
+    paddingTop: wp(2), // 살짝 세로 여유
+    paddingBottom: wp(2),
+    margin: 0, // 상하 여백 제거
+    borderRadius: 0, // 둥근모서리 제거
+    boxShadow: "0 1px 3px rgba(0,0,0,0.1)", // 요즘식 얇은 그림자
   },
   title: {
     color: theme.colors?.text || "#000",
