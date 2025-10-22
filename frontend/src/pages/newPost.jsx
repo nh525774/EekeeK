@@ -25,7 +25,12 @@ const NewPost = () => {
 
   const { files, setFiles } = useFiles();
   const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-  const toAbs = (u) => (u?.startsWith("http") ? u : baseUrl + u);
+  const toAbs = (u) => {
+   if (!u) return u;
+   if (u.startsWith("http")) return u;
+   const path = u.startsWith("/") ? u : `/${u}`;
+   return baseUrl + path;
+ };
   const createdUrlsRef = useRef(new Set());
 
   // 메모리 정리
@@ -133,7 +138,10 @@ const NewPost = () => {
       createdUrlsRef.current.add(u);
       return u;
     }
-    if (typeof f === "string") return toAbs(f);
+    if (typeof f === "string") {
+      const src = toAbs(f);
+      return `${src}${src.includes("?") ? "&" : "?"}v=${Date.now()}`;
+    }
     return f;
   };
 
@@ -185,7 +193,7 @@ const NewPost = () => {
               const previewSrc = toPreviewSrc(file);
               return (
                 <div
-                  key={i}
+                  key={`${i}-${previewSrc}`}
                   style={{ position: "relative", cursor: "pointer" }}
                   onClick={() =>
                     navigate("/editMosaic", { state: { file, index: i } })
@@ -194,8 +202,8 @@ const NewPost = () => {
                 >
                   {isVideo(file) ? (
                     <video
-                      key={previewSrc}
-                      src={previewSrc}
+                    key={`${previewSrc}-v`}
+                    src={previewSrc}
                       style={{ ...thumbStyle, pointerEvents: "none" }}
                       preload="metadata"
                       playsInline
@@ -205,10 +213,11 @@ const NewPost = () => {
                     />
                   ) : (
                     <img
-                      key={previewSrc}
+                      key={`${previewSrc}-i`}
                       src={previewSrc}
                       alt={`preview-${i}`}
                       style={thumbStyle}
+                      onError={(e) => console.warn("[preview img error]", e.currentTarget.src)}
                     />
                   )}
 

@@ -28,3 +28,9 @@ backend/.env
 venv/
 backend/ai_server/license_plate_detector.pt
 backend/ai_server/pii/ner_model/model.safetensors
+backend/node_modules/
+
+**/__pycache__/
+*.pyc
+backend/uploads/
+backend/static/

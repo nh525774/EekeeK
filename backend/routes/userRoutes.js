@@ -1,34 +1,21 @@
+// routes/userRoutes.js
 const express = require("express");
 const router = express.Router();
 
-const fs = require("fs");
-const path = require("path");
 const multer = require("multer");
 const User = require("../models/User");
-
 const firebaseAuth = require("../middleware/firebaseAuth");
+
 const {
   getMe, updateMe, registerUser, getUserById, followUser, unfollowUser, getFollowStatus,
 } = require("../controllers/userController");
 
-// --- Multer: 아바타 저장 위치/파일명 설정 ---
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, "..", "uploads", "avatars");
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const mime = (file.mimetype || "").toLowerCase();
-    const ext =
-      mime === "image/jpeg" ? ".jpg" :
-      mime === "image/png"  ? ".png" :
-      mime === "image/webp" ? ".webp" :
-      (path.extname(file.originalname || "").toLowerCase() || ".jpg");
-    const safeUid = (req.firebaseUid || "anon").replace(/[^a-zA-Z0-9_-]/g, "");
-    cb(null, `${safeUid}_${Date.now()}${ext}`);
-  },
-});
+// 🔐 S3 유틸(CommonJS)
+const { putObject } = require("../src/lib/s3");
+
+// ─────────────────────────────────────────────
+// Multer: 메모리 저장소(디스크 X)
+// ─────────────────────────────────────────────
 const fileFilter = (req, file, cb) => {
   if (!file.mimetype || !file.mimetype.startsWith("image/")) {
     return cb(new Error("이미지 파일만 업로드할 수 있습니다."), false);
@@ -36,11 +23,10 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
-
 const uploadAvatar = (req, res, next) => {
   upload.single("avatar")(req, res, (err) => {
     if (err) {
@@ -51,49 +37,60 @@ const uploadAvatar = (req, res, next) => {
   });
 };
 
+// ─────────────────────────────────────────────
 // 프로필
+// ─────────────────────────────────────────────
 router.get("/me", firebaseAuth, getMe);
 router.patch("/me", firebaseAuth, updateMe);
 router.post("/", firebaseAuth, registerUser);
 
-// 아바타 업로드 — 없으면 자동 생성 후 저장
+// ─────────────────────────────────────────────
+// 아바타 업로드 → S3 저장
+// ─────────────────────────────────────────────
 router.post("/me/avatar", firebaseAuth, uploadAvatar, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: "파일이 없습니다." });
+    if (!req.file) return res.status(400).json({ message: "파일 없음" });
 
-    let me = await User.findOne({ firebaseUid: req.firebaseUid });
-    if (!me) {
-      // 최초 업로드로 프로필 생성
-      const seed = (req.firebaseEmail || "user").split("@")[0];
-      let cand = seed.replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 20) || "user";
-      let n = 0;
-      while (await User.exists({ username: cand })) {
-        n += 1;
-        cand = `${seed}${n}`.replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 24);
-      }
-      me = await User.create({
-        firebaseUid: req.firebaseUid,
-        username: cand,
-        bio: "",
-        profileImageUrl: "",
-        followers: [],
-        following: [],
-      });
-    }
+    // 로그인 사용자
+    const me = await User.findOne({ firebaseUid: req.firebaseUid });
+    if (!me) return res.status(404).json({ message: "사용자 없음" });
 
-    const baseUrl = req.app.get("publicBaseUrl") || `http://localhost:${process.env.PORT || 5000}`;
-    const publicUrl = `${baseUrl}/uploads/avatars/${req.file.filename}`;
+    // 파일 메타
+    const safeName = (req.file.originalname || "avatar").replace(/[^\w.\-]+/g, "_");
+    const ext = safeName.includes(".") ? "" : ".jpg"; // 확장자 없을 때 기본 확장자
+    const key = `uploads/avatars/${Date.now()}_${safeName}${ext}`;
+
+    // S3 업로드 (메모리 버퍼 그대로)
+    await putObject({
+      Key: key,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype || "image/jpeg",
+    });
+
+    // URL 저장
+    const publicBase = process.env.PUBLIC_BUCKET_BASE; 
+    const publicUrl = publicBase ? `${publicBase}/${key}` : key;
+
     me.profileImageUrl = publicUrl;
     await me.save();
 
-    res.json({ url: publicUrl, user: me });
+    res.json({ url: publicUrl, user: {
+      _id: me._id,
+      username: me.username,
+      bio: me.bio,
+      profileImageUrl: me.profileImageUrl,
+      followerCount: (me.followers || []).length,
+      followingCount: (me.following || []).length,
+    }});
   } catch (e) {
-    console.error("아바타 업로드 실패:", e);
+    console.error("avatar upload error:", e);
     res.status(500).json({ message: "아바타 업로드 실패", error: e.message });
   }
 });
 
+// ─────────────────────────────────────────────
 // 조회/팔로우
+// ─────────────────────────────────────────────
 router.get("/by-username/:username", async (req, res) => {
   try {
     const user = await User.findOne({ username: req.params.username })
@@ -112,7 +109,6 @@ router.get("/by-username/:username", async (req, res) => {
   }
 });
 
-// @username 프리픽스 검색
 router.get("/mention-search", firebaseAuth, async (req, res) => {
   const q = (req.query.q || "").trim();
   if (!q) return res.json([]);

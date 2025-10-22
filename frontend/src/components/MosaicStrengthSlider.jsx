@@ -197,9 +197,21 @@ export default function MosaicStrengthSlider({
     </div>
   );
 }
-
 export function strengthToBlockSize(strength, { min = 4, max = 60 } = {}) {
   const s = Math.min(100, Math.max(0, Number(strength) || 0));
   const size = Math.round(min + (max - min) * (s / 100));
   return size % 2 === 0 ? size + 1 : size;
 }
+/*
+export function strengthToBlockSize(
+  strength,
+  { min = 2, max = 40, curve = 1.6 } = {}   // ← 상한 ↓, 곡선 추가
+) {
+  const s = Math.min(100, Math.max(0, Number(strength) || 0));
+  // 곡선 매핑: 낮은 강도에서 완만, 높은 강도에서 급격
+  const t = Math.pow(s / 100, curve);
+  let size = Math.round(min + (max - min) * t);
+  if (size < 2) size = 2;
+  return size; // 짝/홀 구분 필요 없음(타일 px)
+}
+*/

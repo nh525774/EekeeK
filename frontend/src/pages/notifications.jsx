@@ -33,7 +33,7 @@ const Notifications = () => {
 
   const onClickItem = (n) => {
     if (n.type === "post_like" || n.type === "post_comment") {
-      if (n.data?.postId) navigate(`/post?postId=${n.data.postId}`); // 기존 경로 유지
+      if (n.data?.postId) navigate(`/postDetail?postId=${n.data.postId}`);
     } else if (n.type === "follow") {
       if (n.senderId?._id) navigate(`/profile/${n.senderId._id}`);
     }

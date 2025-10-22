@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const User = require("../models/User");
 const UserLoginProfile = require("../models/UserLoginProfile");
 const Geo = require("../services/GeoService");      // ipLookup(ip) -> { country, region, city, ll:[lat,lng] } | null
-const Risk = require("../services/riskService");    // assess({ userId, ipLoc, deviceHash }) -> { score, reasons, prof }
+const Risk = require("../services/riskService");    // assess({ userId, ipLoc, deviceHash }) -> { score, reasons }
 
 /**
  * 프록시/로컬 고려한 클라이언트 IP 추출
@@ -24,14 +24,6 @@ function getClientIp(req) {
   return ip;
 }
 
-/**
- * 로그인 리스크 미들웨어
- * - req.body.lat/lng 이 있으면 Geolocation 우선
- * - 없으면 GeoIP로 대략 위치
- * - 기존 계정은 locationConsent 항상 true로 보정
- * - score < 50: 프로필 갱신(최근위치/신뢰디바이스/히스토리)
- * - score >= 50: 히스토리만 남기고, 프론트에서 추가인증 처리
- */
 module.exports = async function loginRisk(req, res, next) {
   try {
     // 0) userId 확보 (req.user 없으면 firebaseUid로 조회)
@@ -56,7 +48,7 @@ module.exports = async function loginRisk(req, res, next) {
     const ip = getClientIp(req);
     const ipLoc = hasGps ? null : Geo.ipLookup(ip); // { ll:[lat,lng], country, ... } | null
 
-    // 3) 디바이스 지문 (아주 간단 버전)
+    // 3) 디바이스 지문 (간단 버전)
     const ua = req.headers["user-agent"] || "";
     const lang = req.headers["accept-language"] || "";
     const deviceHash = crypto
@@ -64,18 +56,7 @@ module.exports = async function loginRisk(req, res, next) {
       .update(`${ua}|${lang}`)
       .digest("hex");
 
-    // 4) 프로필 확보 + 기존 계정 보정 (consent 항상 true)
-    let prof =
-      (await UserLoginProfile.findOne({ userId })) ||
-      new UserLoginProfile({ userId });
-
-    if (prof.locationConsent !== true) {
-      // 기존 계정은 항상 true로
-      prof.locationConsent = true;
-      await prof.save();
-    }
-
-    // 5) 위험도 평가 입력 (좌표 있으면 그걸 ipLoc 대체로 전달)
+    // 4) 위험도 평가 입력 (좌표 있으면 그걸 ipLoc 대체로 전달)
     const effectiveLoc = hasGps
       ? { ll: gpsLL, country: null, region: null, city: null }
       : ipLoc;
@@ -86,7 +67,7 @@ module.exports = async function loginRisk(req, res, next) {
       deviceHash,
     });
 
-    // 6) 결과를 요청 컨텍스트에 부착
+    // 5) 결과를 요청 컨텍스트에 부착
     req.loginRisk = {
       score,
       reasons,
@@ -96,43 +77,51 @@ module.exports = async function loginRisk(req, res, next) {
       ip,
     };
 
-    // 7) 저장 정책
+    // 6) 원자적 업데이트(버전 충돌 회피)
     const now = new Date();
 
-    // 항상 히스토리는 남김(최신이 앞으로 오도록)
-    prof.riskHistory = [
-      { score, reasons, at: now },
-      ...(prof.riskHistory || []),
-    ].slice(0, 50);
+    // 공통 업데이트: riskHistory(앞삽입/슬라이스), lastIP, 최초 생성 시 locationConsent=true
+    const update = {
+      $setOnInsert: { userId, locationConsent: true },
+      $set: { lastIP: ip },
+      $push: {
+        riskHistory: {
+          $each: [{ score, reasons, at: now }],
+          $position: 0,
+          $slice: 50,
+        },
+      },
+    };
 
+    // 안전/경고 구간(<50)에서만 최근 위치/신뢰 디바이스 갱신
     if (score < 50) {
-      // 안전/경고 구간에서는 신뢰디바이스/최근위치 갱신
-      if (hasGps && gpsLL) {
-        const [lat, lng] = gpsLL;
-        prof.lastLocations = [
-          { geo: { type: "Point", coordinates: [lng, lat] }, at: now },
-          ...(prof.lastLocations || []),
-        ].slice(0, 10);
-      } else if (effectiveLoc?.ll) {
-        const [lat, lng] = effectiveLoc.ll;
-        prof.lastLocations = [
-          { geo: { type: "Point", coordinates: [lng, lat] }, at: now },
-          ...(prof.lastLocations || []),
-        ].slice(0, 10);
+      // 위치가 있을 때만 lastLocations push
+      const ll = hasGps ? gpsLL : (effectiveLoc && effectiveLoc.ll);
+      if (ll && ll.length === 2) {
+        const [lat, lng] = ll;
+        update.$push.lastLocations = {
+          $each: [
+            { geo: { type: "Point", coordinates: [lng, lat] }, at: now },
+          ],
+          $position: 0,
+          $slice: 10,
+        };
       }
-
-      if (!prof.trustedDevices?.includes(deviceHash)) {
-        prof.trustedDevices = [
-          ...(prof.trustedDevices || []),
-          deviceHash,
-        ];
-      }
+      // trustedDevices는 중복 없이 추가
+      update.$addToSet = { trustedDevices: deviceHash };
     }
 
-    // 참고용 IP 기록(로컬은 ::1/127.0.0.1일 수 있음)
-    if (ip) prof.lastIP = ip;
+    // upsert + 단일 원자 연산 → VersionError 방지
+    await UserLoginProfile.findOneAndUpdate(
+      { userId },
+      update,
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      }
+    );
 
-    await prof.save();
     return next();
   } catch (err) {
     console.error("loginRisk error", err);
@@ -140,3 +129,4 @@ module.exports = async function loginRisk(req, res, next) {
     return next();
   }
 };
+
