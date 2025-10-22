@@ -5,7 +5,7 @@ require("dotenv").config({ path: path.join(__dirname, ".env") });
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-//const morgan = require("morgan");
+// const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
 const multer = require("multer");
@@ -21,7 +21,7 @@ app.set("trust proxy", 1);
 // ─────────────────────────────────────────────
 app.use(helmet({ crossOriginEmbedderPolicy: false }));
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
-//app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+// app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
@@ -76,7 +76,6 @@ try {
   console.log("[Auth] firebaseAuth 미들웨어가 없어 패스스루로 동작합니다.");
 }
 
-
 // ─────────────────────────────────────────────
 // API 라우트들
 // ─────────────────────────────────────────────
@@ -90,12 +89,17 @@ app.use("/api/places", require("./routes/placeRoutes"));
 app.use("/api/me", require("./routes/myState"));
 app.use("/api/pii", require("./routes/piiRoutes"));
 
+// ★★★ 추가: eekrew 라우트 등록 (이게 없어서 404 났던 것)
+app.use("/api/eekrew", require("./routes/eekrewRoutes"));
+
 try {
   const userCtrl = require("./controllers/userController");
   app.get("/api/me", firebaseAuth, userCtrl.getMe);
   app.patch("/api/me", firebaseAuth, userCtrl.updateMe);
   app.post("/api/me", firebaseAuth, userCtrl.registerUser);
-} catch { /* 컨트롤러 없으면 myState 라우트가 처리 */ }
+} catch {
+  /* 컨트롤러 없으면 myState 라우트가 처리 */
+}
 
 // ─────────────────────────────────────────────
 // S3에서 바로 읽어와 스트리밍(영상 Range 지원)
@@ -113,20 +117,27 @@ function streamFromS3(res, key) {
   stream.pipe(res);
 }
 
-// 라우터 쪽에서 done이면 즉시 return
+// /uploads/* → S3 후보 키 탐색 후 스트리밍
 app.get(/^\/uploads\/(.+)$/, async (req, res) => {
   const p = decodeURIComponent(req.params[0]).replace(/^\/+/, "");
-  const cands = [ `uploads/${p}`, `${p}`, `eek-eek/uploads/${p}` ];
+  const cands = [`uploads/${p}`, `${p}`, `eek-eek/uploads/${p}`];
 
+  let responded = false;
+  // headObject는 콜백 기반이라 간단히 시퀀셜 체크
   for (const key of cands) {
-    s3.headObject({ Bucket: BUCKET, Key: key }, (err, data) => {
-      if (data) {
-        res.set("Content-Type", data.ContentType || "application/octet-stream");
-        return streamFromS3(res, key);
-      }
-      if (err && err.code === "NotFound") return; // 다음 후보 확인
+    if (responded) break;
+    await new Promise((resolve) => {
+      s3.headObject({ Bucket: BUCKET, Key: key }, (err, data) => {
+        if (data && !responded) {
+          res.set("Content-Type", data.ContentType || "application/octet-stream");
+          streamFromS3(res, key);
+          responded = true;
+        }
+        resolve();
+      });
     });
   }
+  if (!responded) res.status(404).send("Not Found");
 });
 
 app.get(/^\/static\/(.+)$/, (req, res) => {
@@ -135,19 +146,22 @@ app.get(/^\/static\/(.+)$/, (req, res) => {
   streamFromS3(res, key);
 });
 
-
 // ─────────────────────────────────────────────
 // 업로드 샘플 (메모리→S3)
 // ─────────────────────────────────────────────
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 },
+});
 const Post = require("./models/Post");
 
 app.post("/upload", firebaseAuth, upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "파일 없음" });
 
+    const ts = Date.now();
     const safe = (req.file.originalname || "file").replace(/[^\w.\-]+/g, "_");
-    const key = `uploads/images/${Date.now()}_${safe}`;
+    const key = `uploads/images/${ts}_${safe}`;
 
     await s3
       .upload({
@@ -159,7 +173,7 @@ app.post("/upload", firebaseAuth, upload.single("image"), async (req, res) => {
       })
       .promise();
 
-    const storedPath = `/uploads/images/${Date.now()}_${safe}`;
+    const storedPath = `/uploads/images/${ts}_${safe}`;
     res.status(201).json({ url: storedPath });
   } catch (err) {
     console.error("[upload error]", err);
