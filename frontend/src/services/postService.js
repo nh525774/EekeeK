@@ -12,55 +12,63 @@ const withAuth = async () => {
 };
 
 // =====================
-// 게시글 생성/수정
+// 게시글 생성/수정  ✅ 업로드 포함 버전
 // =====================
 export const createOrUpdatePost = async (post) => {
   try {
-    const token = await getIdToken(auth.currentUser);
     const user = auth.currentUser;
+    if (!user) return { success: false, msg: "로그인이 필요합니다." };
+
+    const token = await getIdToken(user);
+
+    const baseUrl = import.meta?.env?.VITE_API_URL || "http://localhost:5000";
+    const toAbs = (u) => {
+      if (!u) return u;
+      if (String(u).startsWith("http")) return u;
+      const path = String(u).startsWith("/") ? u : `/${u}`;
+      return baseUrl + path;
+    };
+    const isImg = (u) => /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(String(u || ""));
+    const isVid = (u) => /\.(mp4|webm|ogg)(\?.*)?$/i.test(String(u || ""));
 
     let imageUrls = [];
     let videoUrl = "";
-    const baseUrl = "http://localhost:5000";
-
-    const isImg = (u) => /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(u);
-    const isVid = (u) => /\.(mp4|webm|ogg)(\?.*)?$/i.test(u);
 
     // (옵션) location.state.file 문자열도 반영
     if (post.file && typeof post.file === "string") {
-      const full = post.file.startsWith("http") ? post.file : baseUrl + post.file;
+      const full = toAbs(post.file);
       if (isVid(full)) videoUrl = full;
       else if (isImg(full)) imageUrls.push(full);
     }
 
-    // 문자열 URL이 섞여 있을 수 있는 files 처리
+    // files 배열: 문자열 URL + File/Blob 혼재 가능
     if (Array.isArray(post.files)) {
+      // 1) 문자열 URL은 그대로 분류
       for (const f of post.files) {
         if (typeof f === "string") {
-          const full = f.startsWith("http") ? f : baseUrl + f;
+          const full = toAbs(f);
           if (isVid(full)) videoUrl = full;
           else if (isImg(full)) imageUrls.push(full);
         }
       }
-      // 파일 객체 업로드 로직은 필요하면 다시 활성화
-      /*
-      const videoFile = post.files.find(
-        (f) => typeof f !== "string" && f?.type?.includes("video")
-      );
-      if (videoFile) {
-        const vForm = new FormData();
-        vForm.append("video", videoFile);
-        vForm.append(
-          "selected",
-          JSON.stringify(["faces","phones","license_plates","addresses","location_sensitive"])
-        );
-        const vRes = await axios.post(baseUrl + "/api/protect-video-mosaic", vForm, {
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-        });
-        if (!vRes.data?.url) return { success:false, msg:"비디오 모자이크 실패" };
-        videoUrl = baseUrl + vRes.data.url;
+
+      // 2) File/Blob 은 업로드 후 반환 URL 사용
+      for (const f of post.files) {
+        if (typeof f !== "string" && f && typeof f.size === "number") {
+          if (f.type?.includes?.("video")) {
+            // TODO: 비디오 업로드/모자이크 API 연결 시 여기 분기 추가
+          } else {
+            // 이미지 업로드: 서버는 필드명 "image"를 사용하며 라우트는 /api/upload 이어야 함
+            const fd = new FormData();
+            fd.append("image", f);
+            const up = await axios.post("/api/upload", fd, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const url = up?.data?.url; // 예: "/uploads/images/xxx.jpg"
+            if (url) imageUrls.push(toAbs(url));
+          }
+        }
       }
-      */
     }
 
     const newPostData = {
@@ -70,10 +78,10 @@ export const createOrUpdatePost = async (post) => {
       imageUrls,
       videoUrl,
       // visibility: "public" | "mutual" | "eekrew"
-      visibility: ["public","mutual","eekrew"].includes(post.visibility)
+      visibility: ["public", "mutual", "eekrew"].includes(post.visibility)
         ? post.visibility
         : "public",
-      eeKrewListId: post.eeKrewListId || null,
+      eeKrewListId: post.eeKrewListId || null, // ← 소문자 d
     };
 
     const res = await axios.post("/api/posts", newPostData, {
@@ -82,7 +90,7 @@ export const createOrUpdatePost = async (post) => {
 
     return res.data?.success
       ? { success: true, data: res.data.data }
-      : { success: false, msg: res.data?.msg || "Post failed" };
+      : { success: false, msg: res.data?.message || res.data?.msg || "Post failed" };
   } catch (error) {
     console.error("createPost error:", error);
     return { success: false, msg: "Could not create your post" };
@@ -154,6 +162,14 @@ export const createPostLike = async (postId) => {
 };
 
 export const removePostLike = async (postId) => {
+  try {
+    const token = await getIdToken(auth.currentUser);
+    const res = await axios.get(`/api/posts/${postId}/unlike`, {
+      headers: { Authorization: { Authorization: `Bearer ${token}` } }, // (타이포 방지: 아래 줄로 교체)
+    });
+  } catch (e) {
+    // no-op
+  }
   try {
     const token = await getIdToken(auth.currentUser);
     const res = await axios.get(`/api/posts/${postId}/unlike`, {

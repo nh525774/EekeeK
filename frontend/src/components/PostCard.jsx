@@ -14,7 +14,6 @@ const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const toAbs = (u) =>
   typeof u === "string" && !u.startsWith("http") ? baseUrl + u : u;
 
-// ✅ 스타일: 배경/보더를 투명/미니멀로 조정 (글래스 유틸이 담당)
 const styles = {
   container: {
     backgroundColor: "transparent",
@@ -55,7 +54,31 @@ const styles = {
     margin: 0,
   },
   postBody: { color: "hsl(var(--foreground))", fontSize: hp(1.6) },
-  media: { width: "100%", borderRadius: "12px", objectFit: "cover" },
+
+  // ✅ 정사각형 슬롯: 이미지/비디오를 같은 비율로
+  squareSlot: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: "1 / 1",
+    overflow: "hidden",
+    borderRadius: 12,
+    background: "#eee",
+  },
+  squareMedia: {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    objectPosition: "center",
+    display: "block",
+  },
+
+  // 단일 미디어 컨테이너 (정사각형 유지)
+  singleWrap: {
+    width: "100%",
+  },
+
   footer: {
     display: "flex",
     alignItems: "center",
@@ -87,7 +110,6 @@ const PostCard = ({
     currentUser ? item?.likes?.includes(currentUser.uid) : false
   );
 
-  // 유저/작성자 파생값
   const ownerId =
     item?.userId || item?.user?._id || item?.user?.userId || item?.user?.id;
   const isOwner = meId && ownerId && String(ownerId) === String(meId);
@@ -159,62 +181,20 @@ const PostCard = ({
   const isVideoUrl = (u) =>
     typeof u === "string" && /\.(mp4|webm|ogg)(\?.*)?$/i.test(u);
 
+  // ✅ 모든 미디어를 정사각형으로 렌더링
   const renderMedia = (urls = []) => {
     if (!urls || urls.length === 0) return null;
 
-    // 단일 미디어
+    // 1개일 때도 정사각형
     if (urls.length === 1) {
       const url = toAbs(urls[0]);
-      return isVideoUrl(url) ? (
-        <div style={{ position: "relative" }}>
-          <video
-            key={url}
-            src={url}
-            preload="metadata"
-            playsInline
-            muted
-            loop
-            autoPlay
-            crossOrigin="anonymous"
-            style={styles.media}
-            onError={() => {}}
-            className="shadow-soft"
-          />
-          <span
-            style={{
-              position: "absolute",
-              left: 8,
-              bottom: 8,
-              fontSize: 10,
-              background: "rgba(0,0,0,0.55)",
-              color: "#fff",
-              padding: "2px 6px",
-              borderRadius: 6,
-              pointerEvents: "none",
-            }}
-          >
-            VIDEO
-          </span>
-        </div>
-      ) : (
-        <img
-          src={url}
-          style={{ ...styles.media, maxHeight: "400px" }}
-          className="shadow-soft"
-        />
-      );
-    }
-
-    // 2개 이상 그리드
-    return (
-      <div
-        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}
-      >
-        {urls.map((u, i) => {
-          const url = toAbs(u);
-          return isVideoUrl(url) ? (
-            <div key={i} style={{ position: "relative" }}>
+      const isVideo = isVideoUrl(url);
+      return (
+        <div style={styles.singleWrap}>
+          <div style={styles.squareSlot} className="shadow-soft">
+            {isVideo ? (
               <video
+                key={url}
                 src={url}
                 preload="metadata"
                 playsInline
@@ -222,15 +202,23 @@ const PostCard = ({
                 loop
                 autoPlay
                 crossOrigin="anonymous"
-                style={{ width: "100%", borderRadius: 12 }}
+                style={styles.squareMedia}
                 onError={() => {}}
-                className="shadow-soft"
               />
+            ) : (
+              <img
+                src={url}
+                alt=""
+                style={styles.squareMedia}
+                onError={() => {}}
+              />
+            )}
+            {isVideo && (
               <span
                 style={{
                   position: "absolute",
-                  left: 6,
-                  bottom: 6,
+                  left: 8,
+                  bottom: 8,
                   fontSize: 10,
                   background: "rgba(0,0,0,0.55)",
                   color: "#fff",
@@ -241,14 +229,59 @@ const PostCard = ({
               >
                 VIDEO
               </span>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // 2개 이상: 2열 정사각형 그리드
+    return (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "8px",
+        }}
+      >
+        {urls.map((u, i) => {
+          const url = toAbs(u);
+          const isVideo = isVideoUrl(url);
+          return (
+            <div key={i} style={styles.squareSlot} className="shadow-soft">
+              {isVideo ? (
+                <video
+                  src={url}
+                  preload="metadata"
+                  playsInline
+                  muted
+                  loop
+                  autoPlay
+                  crossOrigin="anonymous"
+                  style={styles.squareMedia}
+                  onError={() => {}}
+                />
+              ) : (
+                <img src={url} alt="" style={styles.squareMedia} />
+              )}
+              {isVideo && (
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 6,
+                    bottom: 6,
+                    fontSize: 10,
+                    background: "rgba(0,0,0,0.55)",
+                    color: "#fff",
+                    padding: "2px 6px",
+                    borderRadius: 6,
+                    pointerEvents: "none",
+                  }}
+                >
+                  VIDEO
+                </span>
+              )}
             </div>
-          ) : (
-            <img
-              key={i}
-              src={url}
-              style={{ width: "100%", borderRadius: 12 }}
-              className="shadow-soft"
-            />
           );
         })}
       </div>

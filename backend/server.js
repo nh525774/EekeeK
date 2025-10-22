@@ -86,19 +86,17 @@ app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api", require("./routes/protectRoutes"));
 app.use("/api/places", require("./routes/placeRoutes"));
-app.use("/api/me", require("./routes/myState"));
 app.use("/api/pii", require("./routes/piiRoutes"));
+app.use("/api/eekrew", require("./routes/eekrewRoutes")); // 이크루 라우트
 
-// ★★★ 추가: eekrew 라우트 등록 (이게 없어서 404 났던 것)
-app.use("/api/eekrew", require("./routes/eekrewRoutes"));
-
+// /api/me는 컨트롤러가 있으면 그것을, 없으면 myState로 fallback
 try {
   const userCtrl = require("./controllers/userController");
   app.get("/api/me", firebaseAuth, userCtrl.getMe);
   app.patch("/api/me", firebaseAuth, userCtrl.updateMe);
   app.post("/api/me", firebaseAuth, userCtrl.registerUser);
 } catch {
-  /* 컨트롤러 없으면 myState 라우트가 처리 */
+  app.use("/api/me", require("./routes/myState"));
 }
 
 // ─────────────────────────────────────────────
@@ -123,7 +121,6 @@ app.get(/^\/uploads\/(.+)$/, async (req, res) => {
   const cands = [`uploads/${p}`, `${p}`, `eek-eek/uploads/${p}`];
 
   let responded = false;
-  // headObject는 콜백 기반이라 간단히 시퀀셜 체크
   for (const key of cands) {
     if (responded) break;
     await new Promise((resolve) => {
@@ -147,15 +144,15 @@ app.get(/^\/static\/(.+)$/, (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// 업로드 샘플 (메모리→S3)
+// 업로드 (메모리→S3)  ← 프론트와 맞추기 위해 /api/upload 로 변경
 // ─────────────────────────────────────────────
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 },
 });
-const Post = require("./models/Post");
+// const Post = require("./models/Post"); // 사용 안 하면 주석 유지 OK
 
-app.post("/upload", firebaseAuth, upload.single("image"), async (req, res) => {
+app.post("/api/upload", firebaseAuth, upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "파일 없음" });
 

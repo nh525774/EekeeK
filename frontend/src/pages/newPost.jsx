@@ -26,11 +26,11 @@ const NewPost = () => {
   const { files, setFiles } = useFiles();
   const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
   const toAbs = (u) => {
-   if (!u) return u;
-   if (u.startsWith("http")) return u;
-   const path = u.startsWith("/") ? u : `/${u}`;
-   return baseUrl + path;
- };
+    if (!u) return u;
+    if (u.startsWith("http")) return u;
+    const path = u.startsWith("/") ? u : `/${u}`;
+    return baseUrl + path;
+  };
   const createdUrlsRef = useRef(new Set());
 
   // 메모리 정리
@@ -50,7 +50,7 @@ const NewPost = () => {
       try {
         if (!auth.currentUser) return;
         const token = await auth.currentUser.getIdToken();
-        const res = await fetch("/api/users/me", {
+        const res = await fetch("/api/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -98,7 +98,7 @@ const NewPost = () => {
         files, // Blob/File 또는 "/static/..." 문자열 포함
         file: location.state?.file,
         visibility, // "public" | "mutual" | "eekrew" (서비스가 지원하면 활용)
-        eeKrewListID: null, //or 선택된 ID
+        eeKrewListId: null, //or 선택된 ID
       });
 
       if (!result.success) {
@@ -202,8 +202,8 @@ const NewPost = () => {
                 >
                   {isVideo(file) ? (
                     <video
-                    key={`${previewSrc}-v`}
-                    src={previewSrc}
+                      key={`${previewSrc}-v`}
+                      src={previewSrc}
                       style={{ ...thumbStyle, pointerEvents: "none" }}
                       preload="metadata"
                       playsInline
@@ -217,7 +217,9 @@ const NewPost = () => {
                       src={previewSrc}
                       alt={`preview-${i}`}
                       style={thumbStyle}
-                      onError={(e) => console.warn("[preview img error]", e.currentTarget.src)}
+                      onError={(e) =>
+                        console.warn("[preview img error]", e.currentTarget.src)
+                      }
                     />
                   )}
 
