@@ -76,12 +76,12 @@ try {
   console.log("[Auth] firebaseAuth 미들웨어가 없어 패스스루로 동작합니다.");
 }
 
-// ─────────────────────────────────────────────
 // API 라우트들
 // ─────────────────────────────────────────────
 app.use("/api/search", require("./routes/searchRoutes"));
 app.use("/api/posts", require("./routes/postRoutes"));
 app.use("/api/posts/:postId/comments", require("./routes/commentRoutes"));
+app.use("/api/me", require("./routes/myState")); // ✅ 위험도/디바이스 상태 전용
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api", require("./routes/protectRoutes"));
@@ -89,14 +89,14 @@ app.use("/api/places", require("./routes/placeRoutes"));
 app.use("/api/pii", require("./routes/piiRoutes"));
 app.use("/api/eekrew", require("./routes/eekrewRoutes")); // 이크루 라우트
 
-// /api/me는 컨트롤러가 있으면 그것을, 없으면 myState로 fallback
+//  userController 직접 연결은 /api/users/* 로만 (중복 방지)
 try {
   const userCtrl = require("./controllers/userController");
-  app.get("/api/me", firebaseAuth, userCtrl.getMe);
-  app.patch("/api/me", firebaseAuth, userCtrl.updateMe);
-  app.post("/api/me", firebaseAuth, userCtrl.registerUser);
-} catch {
-  app.use("/api/me", require("./routes/myState"));
+  app.get("/api/users/me", firebaseAuth, userCtrl.getMe);
+  app.patch("/api/users/me", firebaseAuth, userCtrl.updateMe);
+  app.post("/api/users/register", firebaseAuth, userCtrl.registerUser);
+} catch (e) {
+  console.warn("userController not found, skipping direct bindings");
 }
 
 // ─────────────────────────────────────────────
@@ -105,11 +105,24 @@ try {
 function streamFromS3(res, key) {
   const stream = s3.getObject({ Bucket: BUCKET, Key: key }).createReadStream();
 
-  stream.on("error", (err) => {
+    // 클라이언트가 연결 끊으면 스트림 정리
+  res.once("close", () => {
+    try { stream.destroy(); } catch {}
+  });
+
+  // 스트림 에러 처리: 이미 헤더/바디 전송 시작했다면 추가 전송 금지
+  stream.once("error", (err) => {
     console.error("[S3 stream error]", err.code, key);
-    if (err.code === "NoSuchKey") res.status(404).send("Not Found");
-    else if (err.code === "Forbidden") res.status(403).send("Forbidden");
-    else res.status(500).send("S3 Error");
+    try { stream.destroy(); } catch {}
+    if (!res.headersSent) {
+      const code = err.code === "NoSuchKey" ? 404
+                : err.code === "Forbidden" ? 403
+                : 500;
+      // 한 번만 응답
+      return res.status(code).send(code === 500 ? "S3 Error" : "Not Found");
+    }
+    // 이미 전송 중이면 연결만 닫기(추가 헤더/바디 금지)
+    try { res.end(); } catch {}
   });
 
   stream.pipe(res);

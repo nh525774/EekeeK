@@ -1,18 +1,29 @@
 const express = require("express");
-const { scanTextWithPy, quickRegexScan } = require("../utils/piiScan");
-
 const router = express.Router();
+const { postJson } = require("../src/lib/aiClient");
 
+// NER 기반 텍스트 PII 스캔 (FastAPI: /protect-pii-text)
+router.post("/protect-pii-text", async (req, res) => {
+  try {
+    const { text = "" } = req.body || {};
+    if (!text.trim()) return res.status(400).json({ ok: false, message: "empty text" });
+
+    const data = await postJson("/protect-pii-text", { text });
+    return res.json(data);
+  } catch (e) {
+    console.error("protect-pii-text error:", e?.response?.data || e);
+    return res.status(500).json({ ok: false, message: "AI NER failed" });
+  }
+});
+
+// 호환: 기존 경로가 /scan-text였으면 유지
 router.post("/scan-text", async (req, res) => {
   try {
-    const { text = "", mode = "auto" } = req.body || {};
-    if (mode === "regex") {
-      return res.json({ ok: true, hits: quickRegexScan(text), fallback: "regex_only" });
-    }
-    const out = await scanTextWithPy(text);
-    return res.json(out);
+    const { text = "" } = req.body || {};
+    const data = await postJson("/protect-pii-text", { text });
+    return res.json(data);
   } catch (e) {
-    return res.status(200).json({ ok: false, error: String(e), hits: quickRegexScan(req.body?.text || ""), fallback: "regex_only" });
+    return res.status(500).json({ ok: false, message: "AI NER failed" });
   }
 });
 

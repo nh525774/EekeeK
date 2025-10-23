@@ -4,10 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "cd backend && npm start",
-    "client": "cd frontend && npm run dev"
-  },
+  "dev": "concurrently \"npm run server\" \"npm run client\" \"npm run ai\"",
+  "server": "cd backend && npm start",
+  "client": "cd frontend && npm run dev",
+  "ai": "cd backend/ai_server && python -m uvicorn serve:app --host 0.0.0.0 --port 7000 --reload"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
