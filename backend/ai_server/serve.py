@@ -197,3 +197,11 @@ def protect_pii_text(body: PiiTextIn):
 @app.post("/scan-text")
 def scan_text_alias(body: PiiTextIn):
     return protect_pii_text(body)
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("serve:app", host="0.0.0.0", port=7000)
