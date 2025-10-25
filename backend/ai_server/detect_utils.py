@@ -13,6 +13,7 @@ from ultralytics import YOLO
 from ultralytics.cfg import get_cfg
 from facenet_pytorch import MTCNN
 from dotenv import load_dotenv
+from pathlib import Path
 
 
 # ✅ 로그 제거용 context manager
@@ -39,10 +40,13 @@ naver_client_secret = os.environ.get('NAVER_CLIENT_SECRET')
 
 # ✅ YOLO 모델 로드 (로그 suppress 포함)
 def load_model():
-    model_path = os.path.join(os.path.dirname(__file__), "license_plate_detector.pt")
-    cfg = get_cfg(overrides={'verbose': False})
-    with contextlib.redirect_stdout(sys.stderr):
-        return YOLO(model_path, verbose=False)
+    DEFAULT_LOCAL = os.path.join(os.path.dirname(__file__), "license_plate_detector.pt")
+    model_path = os.getenv("LICENSE_PLATE_MODEL", DEFAULT_LOCAL)
+
+    if not Path(model_path).exists():
+        raise FileNotFoundError(f"model not found: {model_path}")
+
+    print(f"[license-plate] using model: {model_path}")
 
 with suppress_output():
     lp_model = load_model()
