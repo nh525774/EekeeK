@@ -36,8 +36,8 @@ async function uploadLocalFileToS3(localPath, keyPrefix = "uploads/processed/") 
   const ct = guessContentTypeByExt(localPath);
   const key = `${keyPrefix}${Date.now()}_${path.basename(localPath)}`;
   await putObject({ Key: key, Body: body, ContentType: ct });
-  const publicBase = process.env.PUBLIC_BUCKET_BASE;
-  return publicBase ? `${publicBase}/${key}` : key;
+  const base = (process.env.PUBLIC_BUCKET_BASE || "").trim().replace(/\/+$/, "");
+  return base ? `${base}/${key}` : `/${key}`;
 }
 
 function toFilePartsFromMulter(file, fieldName = "image") {
@@ -74,11 +74,14 @@ router.post("/protect-mosaic", upload.array("image", 10), async (req, res) => {
 
     const data = await postForm("/protect-mosaic", fields, files);
     // data: { results: [ { out_path }, ... ] }  → S3 업로드하여 URL 반환
+    const stripLocal = (u) => (typeof u === "string"
+  ? u.replace(/^https?:\/\/localhost:5000/i, "")
+  : u);
     const outUrls = [];
 
     for (const r of data.results || []) {
       if (Array.isArray(r.out_paths)) {
-        for (const p of r.out_paths) outUrls.push(await uploadLocalFileToS3(p, "uploads/processed/images/"));
+        for (const p of r.out_paths) outUrls.push(stripLocal(await uploadLocalFileToS3(p, "uploads/processed/images/")));
       } else if (r.out_path) {
         outUrls.push(await uploadLocalFileToS3(r.out_path, "uploads/processed/images/"));
       }

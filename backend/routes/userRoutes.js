@@ -69,9 +69,13 @@ router.post("/me/avatar", firebaseAuth, uploadAvatar, async (req, res) => {
 
     // URL 저장
     const publicBase = process.env.PUBLIC_BUCKET_BASE; 
-    const publicUrl = publicBase ? `${publicBase}/${key}` : key;
+    const base = (publicBase || "").trim().replace(/\/+$/, "");
+    const publicUrl = base ? `${base}/${key}` : `/${key}`;
+    const stripLocal = (u) => (typeof u === "string"
+  ? u.replace(/^https?:\/\/localhost:5000/i, "")
+  : u);
 
-    me.profileImageUrl = publicUrl;
+    me.profileImageUrl = stripLocal(publicUrl);
     await me.save();
 
     res.json({ url: publicUrl, user: {

@@ -44,11 +44,14 @@ const NewPost = () => {
       try {
         if (!auth.currentUser) return;
         const token = await auth.currentUser.getIdToken();
-        const res = await fetch("/api/me", {
+        const res = await fetch("/api/users/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        setMe(data); // data.username, data.profileImageUrl 존재
+        setMe({
+          username: data?.username || "",
+          profileImageUrl: data?.profileImageUrl || "",
+        });
       } catch {
         setMe(null);
       }
