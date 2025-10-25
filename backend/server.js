@@ -76,6 +76,11 @@ try {
   console.log("[Auth] firebaseAuth 미들웨어가 없어 패스스루로 동작합니다.");
 }
 
+app.use(
+  "/uploads",
+  express.static("/app/uploads", { fallthrough: true, etag: false, maxAge: "1m" })
+);
+
 // API 라우트들
 // ─────────────────────────────────────────────
 app.use("/api/search", require("./routes/searchRoutes"));
