@@ -4,8 +4,8 @@ node_modules/
 # ✅ 환경 변수 파일
 .env
 .env.local
-.env.development
-.env.production
+.env.*
+!frontend/.env.production
 
 # ✅ 로그/에러 파일
 npm-debug.log*

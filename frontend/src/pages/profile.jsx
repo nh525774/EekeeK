@@ -11,6 +11,7 @@ import axios from "axios";
 import { auth } from "../api/firebase";
 import { getUserImageSrc } from "../services/imageService";
 import { onAuthStateChanged } from "firebase/auth";
+import { assetUrl } from "../utils/url";
 
 /* ---------------------------------------------
  * eekrew 버튼들
@@ -217,9 +218,8 @@ const Profile = () => {
     if (!v) return null;
     v = String(v).replace(/\\/g, "/");
     if (/^(https?:|blob:|data:)/i.test(v)) return v; // 절대/blob/data 그대로
-    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-    const path = v.startsWith("/") ? v : `/${v}`; // /uploads/... 보장
-    return baseUrl + path; // 백엔드 프록시로 이동
+    const path = v.startsWith("/") ? v : `/${v}`;
+    return assetUrl(path);
   };
 
   // 내 프로필 불러오기

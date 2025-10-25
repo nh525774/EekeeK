@@ -13,6 +13,7 @@ import Icon from "../assets/icons";
 import { createOrUpdatePost } from "../services/postService";
 import { useFiles } from "../contexts/FilesContext";
 import { getUserImageSrc } from "../services/imageService";
+import { assetUrl } from "../utils/url";
 
 const NewPost = () => {
   const navigate = useNavigate();
@@ -24,13 +25,6 @@ const NewPost = () => {
   const [visibility, setVisibility] = useState("public");
 
   const { files, setFiles } = useFiles();
-  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-  const toAbs = (u) => {
-    if (!u) return u;
-    if (u.startsWith("http")) return u;
-    const path = u.startsWith("/") ? u : `/${u}`;
-    return baseUrl + path;
-  };
   const createdUrlsRef = useRef(new Set());
 
   // 메모리 정리
@@ -139,7 +133,7 @@ const NewPost = () => {
       return u;
     }
     if (typeof f === "string") {
-      const src = toAbs(f);
+      const src = assetUrl(f);
       return `${src}${src.includes("?") ? "&" : "?"}v=${Date.now()}`;
     }
     return f;
@@ -278,7 +272,7 @@ const NewPost = () => {
           location.state?.file &&
           (() => {
             const raw = location.state.file;
-            const src = toAbs(raw);
+            const src = assetUrl(raw);
             const isVid =
               typeof raw === "string" && /\.(mp4|webm|ogg)(\?.*)?$/i.test(raw);
 

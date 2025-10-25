@@ -9,10 +9,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { deletePostById, createPostLike } from "../services/postService";
 import { getUserImageSrc } from "../services/imageService";
+import { assetUrl } from "..//utils/url";
 
-const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-const toAbs = (u) =>
-  typeof u === "string" && !u.startsWith("http") ? baseUrl + u : u;
 
 const styles = {
   container: {
@@ -187,7 +185,7 @@ const PostCard = ({
 
     // 1개일 때도 정사각형
     if (urls.length === 1) {
-      const url = toAbs(urls[0]);
+      const url = assetUrl(urls[0]);
       const isVideo = isVideoUrl(url);
       return (
         <div style={styles.singleWrap}>
@@ -245,7 +243,7 @@ const PostCard = ({
         }}
       >
         {urls.map((u, i) => {
-          const url = toAbs(u);
+          const url = assetUrl(u);
           const isVideo = isVideoUrl(url);
           return (
             <div key={i} style={styles.squareSlot} className="shadow-soft">

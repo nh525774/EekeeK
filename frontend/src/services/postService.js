@@ -2,6 +2,8 @@
 import axios from "axios";
 import { auth } from "../api/firebase";
 import { getIdToken } from "firebase/auth";
+import { assetUrl } from "../utils/url";
+
 
 // 공통: 선택적 토큰 첨부 (비로그인일 때도 안전하게 요청)
 const withAuth = async () => {
@@ -21,13 +23,6 @@ export const createOrUpdatePost = async (post) => {
 
     const token = await getIdToken(user);
 
-    const baseUrl = import.meta?.env?.VITE_API_URL || "http://localhost:5000";
-    const toAbs = (u) => {
-      if (!u) return u;
-      if (String(u).startsWith("http")) return u;
-      const path = String(u).startsWith("/") ? u : `/${u}`;
-      return baseUrl + path;
-    };
     const isImg = (u) => /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(String(u || ""));
     const isVid = (u) => /\.(mp4|webm|ogg)(\?.*)?$/i.test(String(u || ""));
 
@@ -36,7 +31,7 @@ export const createOrUpdatePost = async (post) => {
 
     // (옵션) location.state.file 문자열도 반영
     if (post.file && typeof post.file === "string") {
-      const full = toAbs(post.file);
+      const full = assetUrl(post.file);
       if (isVid(full)) videoUrl = full;
       else if (isImg(full)) imageUrls.push(full);
     }
@@ -46,7 +41,7 @@ export const createOrUpdatePost = async (post) => {
       // 1) 문자열 URL은 그대로 분류
       for (const f of post.files) {
         if (typeof f === "string") {
-          const full = toAbs(f);
+          const full = assetUrl(f);
           if (isVid(full)) videoUrl = full;
           else if (isImg(full)) imageUrls.push(full);
         }
@@ -65,7 +60,7 @@ export const createOrUpdatePost = async (post) => {
               headers: { Authorization: `Bearer ${token}` },
             });
             const url = up?.data?.url; // 예: "/uploads/images/xxx.jpg"
-            if (url) imageUrls.push(toAbs(url));
+            if (url) imageUrls.push(assetUrl(url));
           }
         }
       }

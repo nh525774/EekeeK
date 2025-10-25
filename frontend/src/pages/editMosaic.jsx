@@ -8,6 +8,7 @@ import { useFiles } from "../contexts/FilesContext";
 import MosaicStrengthSlider, {
   strengthToBlockSize,
 } from "../components/MosaicStrengthSlider";
+import { assetUrl, apiUrl } from "../utils/url";
 
 const EditMosaic = () => {
   const navigate = useNavigate();
@@ -15,11 +16,11 @@ const EditMosaic = () => {
   const { file, index } = state || {};
   const { files, setFiles } = useFiles();
 
+
   useEffect(() => {
     if (!file) navigate(-1);
   }, [file, navigate]);
 
-  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   // --- 미디어(이미지/비디오) 미리보기 관리 ---
   const mediaRef = useRef(null);
@@ -46,7 +47,7 @@ const EditMosaic = () => {
         return;
       }
       if (typeof fileOrUrl === "string") {
-        const abs = fileOrUrl.startsWith("http") ? fileOrUrl : baseUrl + fileOrUrl;
+        const abs = assetUrl(fileOrUrl);
         const isVid = /\.(mp4|webm|ogg)(\?.*)?$/i.test(abs);
         setIsVideo(isVid);
         setImageUrl(abs);
@@ -65,7 +66,7 @@ const EditMosaic = () => {
     if (typeof f === "string") {
       let url = f;
       if (!(url.startsWith("blob:") || url.startsWith("data:"))) {
-        url = url.startsWith("http") ? url : baseUrl + url;
+        url = assetUrl(url);
       }
       const res = await fetch(url);
       if (!res.ok) throw new Error(`리소스 다운로드 실패: ${res.status}`);
@@ -185,7 +186,7 @@ const EditMosaic = () => {
 
         setAnalysis(parsed);
         if (!imageUrl && data.thumb_url) {
-          const abs = data.thumb_url.startsWith("http") ? data.thumb_url : baseUrl + data.thumb_url;
+          const abs = assetUrl(data.thumb_url);
           setImageUrl(abs);
         }
       } catch (err) {
@@ -261,9 +262,7 @@ const EditMosaic = () => {
    return u.startsWith("uploads") || u.startsWith("static") ? `/${u}` : u;
  };
  const proxyPath = toProxyPath(fileUrl);      // 예: "/uploads/avatars/xxx.jpg"
- const fullUrl = baseUrl + proxyPath;
-
-      await setPreviewFromFile(fullUrl);
+ await setPreviewFromFile(assetUrl(proxyPath));
 
       setFiles((prev) => {
         const cp = [...prev];

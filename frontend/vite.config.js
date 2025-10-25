@@ -6,6 +6,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:5000', // 프록시 추가
+      '/uploads': 'http://localhost:5000',
     },
   },
 })
