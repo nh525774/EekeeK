@@ -47,6 +47,7 @@ def load_model():
         raise FileNotFoundError(f"model not found: {model_path}")
 
     print(f"[license-plate] using model: {model_path}")
+    return YOLO(model_path)
 
 with suppress_output():
     lp_model = load_model()
@@ -120,8 +121,7 @@ def detect_location_sensitive(fields):
     return boxes
 
 def detect_license_plate(image_path):
-    with suppress_output():
-        results = lp_model(image_path)
+    results = lp_model.predict(source=image_path, conf=0.25, verbose=False)
     boxes = results[0].boxes.xyxy.cpu().numpy()
     return [list(map(int, box[:4])) for box in boxes]
 
