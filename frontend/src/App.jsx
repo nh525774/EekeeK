@@ -5,7 +5,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/home";
 import NewPost from "./pages/newPost";
-import Notifications from "./pages/Notifications";
+import Notifications from "./pages/notifications";
 import Profile from "./pages/profile";
 import EditProfile from "./pages/editProfile";
 import EditMosaic from "./pages/editMosaic";
