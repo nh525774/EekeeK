@@ -48,11 +48,13 @@ if __name__ == "__main__":
             sys.exit(0)
 
         ext = os.path.splitext(image_path)[1] or ".jpg"
-        out_dir = tempfile.gettempdir()
-        out_path = os.path.join(out_dir, f"mosaic_{uuid.uuid4().hex}{ext}")
+        OUT_DIR = os.getenv("MOSAIC_OUT_DIR", "/app/uploads/processed/images")
+        os.makedirs(OUT_DIR, exist_ok=True)
+        out_path = os.path.join(OUT_DIR, f"mosaic_{uuid.uuid4().hex}{ext}")
 
         apply_mosaic(image_path, final_boxes, out_path, block_size=block_size)
         print(json.dumps({"out_path": out_path}, ensure_ascii=False), flush=True)
+
 
     except Exception as e:
         print(json.dumps({"error": f"mosaic failed: {str(e)}"}, ensure_ascii=False), flush=True)
