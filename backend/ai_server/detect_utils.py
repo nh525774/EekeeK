@@ -136,29 +136,47 @@ def detect_faces(image_path):
             face_data.append({"id": idx, "box": [x1, y1, x2, y2]})
     return face_data
 
-def detect_personal_info(image_path):
-    try:
-        # OCR 결과 받아오기 (예외 방지용 get)
-        ocr_result = run_ocr(image_path)
-        fields = ocr_result.get('images', [{}])[0].get('fields', [])
+def detect_personal_info(image_path, keys=None):
+    # keys: ["license_plates","faces","phones","emails","addresses","location_sensitive"] 중 일부
+    keys = set([k.strip() for k in (keys or []) if k and isinstance(k, str)])
 
-        # 항목별 탐지 (None 방지)
-        phones, emails = detect_phones_emails(fields)
-        addresses = detect_addresses(fields)
-        locations = detect_location_sensitive(fields)
-        plates = detect_license_plate(image_path) or []
-        faces = detect_faces(image_path) or []
+    out = {
+        "phones": [],
+        "emails": [],
+        "addresses": [],
+        "location_sensitive": [],
+        "license_plates": [],
+        "faces": [],
+    }
 
-        # 결과 리턴
-        return {
-            "phones": phones,
-            "emails": emails,
-            "addresses": addresses,
-            "location_sensitive": locations,
-            "license_plates": plates,
-            "faces": faces
-        }
+    # OCR 계열
+    if not keys or keys & {"phones","emails","addresses","location_sensitive"}:
+        try:
+            ocr_result = run_ocr(image_path)
+            fields = ocr_result.get('images', [{}])[0].get('fields', [])
+            if (not keys) or ("phones" in keys or "emails" in keys):
+                p, e = detect_phones_emails(fields)
+                if "phones" in keys or not keys: out["phones"] = p
+                if "emails" in keys or not keys: out["emails"] = e
+            if (not keys) or ("addresses" in keys):
+                out["addresses"] = detect_addresses(fields)
+            if (not keys) or ("location_sensitive" in keys):
+                out["location_sensitive"] = detect_location_sensitive(fields)
+        except Exception as e:
+            print(f"[OCR] skip: {e}", file=sys.stderr)
 
-    except Exception as e:
-        print(f"❌ detect_personal_info 실패: {e}", file=sys.stderr)
-        return {}
+    # 번호판
+    if (not keys) or ("license_plates" in keys):
+        try:
+            out["license_plates"] = detect_license_plate(image_path) or []
+        except Exception as e:
+            print(f"[LP] skip: {e}", file=sys.stderr)
+
+    # 얼굴
+    if (not keys) or ("faces" in keys):
+        try:
+            out["faces"] = detect_faces(image_path) or []
+        except Exception as e:
+            print(f"[FACE] skip: {e}", file=sys.stderr)
+
+    return out

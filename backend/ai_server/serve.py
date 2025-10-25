@@ -66,22 +66,43 @@ def root():
 
 # ─────────────────────────────────────────────────────────
 # 1) /protect-analyze : 이미지 분석 (detect_entry.py)
-#    Express: POST /api/protect-analyze  (multer array)
+#    Express: POST /api/protect-analyze
+#    - 파일 필드명: image[] 또는 file[] 모두 허용
+#    - keys: "license_plates,faces" 형태 (옵션)
 #    반환: 각 이미지별 분석 JSON 리스트
 # ─────────────────────────────────────────────────────────
 @app.post("/protect-analyze")
-async def protect_analyze(image: List[UploadFile] = File(...)):
-    if not image:
+async def protect_analyze(
+    # 둘 다 허용 (호환성)
+    image: Optional[List[UploadFile]] = File(None),
+    file: Optional[List[UploadFile]]  = File(None),
+    # 선택 키(없으면 빈 문자열)
+    keys: Optional[str] = Form("")
+):
+    # 업로드 합치기
+    uploads: List[UploadFile] = []
+    if image: uploads.extend(image)
+    if file:  uploads.extend(file)
+
+    if not uploads:
         return JSONResponse({"error": "No images provided"}, status_code=400)
 
     temps, results = [], []
     try:
-        for f in image:
+        # 임시파일로 저장
+        for f in uploads:
             p = _temp_write(f)
             temps.append(p)
+
+        # detect_entry.py 호출
         for p in temps:
-            out = _run_py("detect_entry.py", [p])
+            args = [p]
+            # detect_entry.py가 keys 두번째 인자를 지원하면 전달, 아니면 무시됨
+            if keys and keys.strip():
+                args.append(keys.strip())
+            out = _run_py("detect_entry.py", args)
             results.append(out)
+
         return {"results": results}
     finally:
         for p in temps:
