@@ -280,7 +280,12 @@ if __name__ == "__main__":
 
         block_size = int(sys.argv[4]) if len(sys.argv) >= 5 else 15
 
-        out_dir = tempfile.gettempdir()
+        out_dir = (
+            os.environ.get("MOSAIC_VIDEO_OUT_DIR")
+            or os.environ.get("MOSAIC_OUT_DIR")
+            or "/app/uploads/processed/videos")
+
+        os.makedirs(out_dir, exist_ok=True)
         output_path = os.path.join(out_dir, f"mosaic_{uuid.uuid4().hex}.mp4")
 
         mosaic_video(video_path, selected_keys, fixed_boxes, output_path, block_size=block_size)
