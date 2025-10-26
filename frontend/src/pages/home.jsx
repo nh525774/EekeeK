@@ -10,6 +10,7 @@ import PostList from "../components/postList";
 import { fetchPosts } from "../services/postService";
 import { auth } from "../api/firebase";
 import { getUserImageSrc } from "../services/imageService";
+import logo3 from "@/assets/logo3.png";
 
 // ✅ 공통 배너 (항상 렌더, 닫기 가능)
 function RiskPersistentBanner({ risk, isNewDevice, userId }) {
@@ -256,20 +257,20 @@ const Home = () => {
               ...styles.header,
               position: "sticky", // ✅ 스크롤해도 위에 고정
               top: 0,
-              backdropFilter: "blur(12px)", // ✅ 배경 블러
-              backgroundColor: "rgba(255,255,255,0.2)", // ✅ 반투명 흰색 배경
+              backdropFilter: "blur(12px)",
+              backgroundColor: "rgba(255,255,255,0.2)", 
               zIndex: 1000,
             }}
             className="header-blur flex items-center justify-start py-4 pl-4 pr-1 border-b border-border shadow-sm"
           >
             <img
-              src="/src/assets/logo3.png"
+              src={logo3}
               alt="EekeeK Logo"
               style={{
                 height: 56,
                 objectFit: "contain",
                 marginTop: 0,
-                display: "block", // 인라인 이미지의 baseline 여백 제거
+                display: "block", 
                 transform: "translateY(-2px)",
               }}
               onClick={() => {
