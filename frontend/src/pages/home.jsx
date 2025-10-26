@@ -215,6 +215,74 @@ const Home = () => {
   const ranRef = useRef(false);
 
   useEffect(() => {
+  const user = auth.currentUser;
+  if (!user || ranRef.current) return;
+  ranRef.current = true;
+
+  let cancelled = false;
+
+  async function run() {
+    try {
+      const token = await user.getIdToken();
+
+      // 1) 보안 출처가 아니면(HTTP) 또는 geolocation이 없으면 건너뛰기
+      const canUseGeo =
+        typeof window !== "undefined" &&
+        window.isSecureContext && // HTTPS 또는 localhost
+        "geolocation" in navigator;
+
+      // 2) 권한 미리 확인(있으면만 시도)
+      let coords = null;
+      if (canUseGeo && navigator.permissions?.query) {
+        try {
+          const perm = await navigator.permissions.query({ name: "geolocation" });
+          if (perm.state === "granted" || perm.state === "prompt") {
+            coords = await new Promise((resolve) => {
+              navigator.geolocation.getCurrentPosition(
+                (pos) =>
+                  resolve({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                  }),
+                () => resolve(null), // 실패 시 무시
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+              );
+            });
+          }
+        } catch {
+          // 권한 조회 실패 → 좌표 없이 진행
+        }
+      }
+
+      // 3) 좌표가 있으면 포함, 없으면 없이 호출
+      const payload = coords ? { lat: coords.lat, lng: coords.lng } : {};
+      const { data } = await axios.post("/api/me", payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (cancelled) return;
+
+      const r = data?.risk;
+      setRisk(r ? r : { score: 0 });
+      setIsNewDevice(!!data?.isNewDevice);
+    } catch (e) {
+      if (!cancelled) {
+        console.warn("risk check skipped/failed:", e?.message || e);
+        setRisk(null);
+      }
+    }
+  }
+
+  run();
+  return () => {
+    cancelled = true;
+  };
+}, [auth.currentUser?.uid]);
+
+
+  /*
+  useEffect(() => {
+    
     const user = auth.currentUser;
     if (!user || ranRef.current) return;
     ranRef.current = true;
@@ -245,6 +313,7 @@ const Home = () => {
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }, [auth.currentUser?.uid]);
+  */
 
   return (
     <ScreenWrapper bg="white">
