@@ -10,7 +10,7 @@ import PostList from "../components/postList";
 import { fetchPosts } from "../services/postService";
 import { auth } from "../api/firebase";
 import { getUserImageSrc } from "../services/imageService";
-import logo3 from "@/assets/logo3.png";
+import logo3 from "../assets/logo3.png";
 
 // ✅ 공통 배너 (항상 렌더, 닫기 가능)
 function RiskPersistentBanner({ risk, isNewDevice, userId }) {
