@@ -256,6 +256,7 @@ def ensure_h264(src_mp4: str) -> str:
     cmd = ["ffmpeg","-y","-i",src_mp4,"-movflags","+faststart",# ✅ 비디오: H.264 baseline/level3.0 + yuv420p (iOS 호환)
         "-c:v","libx264","-profile:v","baseline","-level","3.0",
         "-pix_fmt","yuv420p","-preset","veryfast","-crf","23",
+        "-vf","scale=trunc(iw/2)*2:trunc(ih/2)*2",
         # ✅ 오디오: AAC (무음이어도 괜찮지만 트랙이 있으면 더 호환적)
         "-c:a","aac","-b:a","128k","-ac","2",dst_mp4]
     try:
