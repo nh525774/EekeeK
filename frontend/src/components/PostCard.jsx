@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { deletePostById, createPostLike } from "../services/postService";
 import { getUserImageSrc } from "../services/imageService";
-import { assetUrl } from "..//utils/url";
+import { assetUrl } from "../utils/url";
 
 
 const styles = {
@@ -175,6 +175,9 @@ const PostCard = ({
       alert("삭제 실패 : " + err.message);
     }
   };
+    const isIOS =
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const isVideoUrl = (u) =>
     typeof u === "string" && /\.(mp4|webm|ogg)(\?.*)?$/i.test(u);
@@ -194,14 +197,22 @@ const PostCard = ({
               <video
                 key={url}
                 src={url}
+                type="video/mp4"
                 preload="metadata"
                 playsInline
                 muted
-                loop
-                autoPlay
-                crossOrigin="anonymous"
-                style={styles.squareMedia}
-                onError={() => {}}
+    // ⬇ iOS에선 controls+수동재생, 그 외 자동재생 허용
+    {...(isIOS
+      ? { controls: true, autoPlay: false, loop: false }
+      : { autoPlay: true, loop: true })}
+    // ⬇ iOS가 첫 프레임을 안 그리는 경우 강제로 그리기
+    onLoadedMetadata={(e) => {
+      if (isIOS) {
+        try { e.currentTarget.currentTime = 0.001; } catch {}
+      }
+    }}
+    style={styles.squareMedia}
+    onError={(e) => console.warn("video error:", e.currentTarget.src)}
               />
             ) : (
               <img
@@ -253,11 +264,15 @@ const PostCard = ({
                   preload="metadata"
                   playsInline
                   muted
-                  loop
-                  autoPlay
-                  crossOrigin="anonymous"
-                  style={styles.squareMedia}
-                  onError={() => {}}
+                  {...(isIOS ? { controls: true, autoPlay: false, loop: false } : { autoPlay: true, loop: true })}
+                  // iOS가 썸네일을 안 그리는 경우 강제로 첫 프레임 찍기
+                  onLoadedMetadata={(e) => {
+                    if (isIOS) {
+                  try { e.currentTarget.currentTime = 0.001; } catch {}
+                  }
+                }}
+              style={styles.squareMedia}
+                onError={(e) => console.warn("video error:", e.currentTarget.src)}
                 />
               ) : (
                 <img src={url} alt="" style={styles.squareMedia} />

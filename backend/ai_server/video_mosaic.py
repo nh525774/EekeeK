@@ -256,10 +256,14 @@ def ensure_h264(src_mp4: str) -> str:
     cmd = [
         "ffmpeg", "-y", "-i", src_mp4,
         "-movflags", "+faststart",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.0",
+        "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "23",
         "-c:a", "aac", "-b:a", "128k",
         dst_mp4
     ]
+    try:
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        os.replace(dst_mp4, src_mp4)
     except Exception as e:
         print(json.dumps({"warn": f"ffmpeg convert failed: {e}"}))
     return src_mp4

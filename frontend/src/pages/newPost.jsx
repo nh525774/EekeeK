@@ -129,6 +129,10 @@ const NewPost = () => {
     return false;
   };
 
+  const isIOS =
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   const toPreviewSrc = (f) => {
     if (f instanceof Blob) {
       const u = URL.createObjectURL(f);
@@ -202,12 +206,21 @@ const NewPost = () => {
                       key={`${previewSrc}-v`}
                       src={previewSrc}
                       style={{ ...thumbStyle, pointerEvents: "none" }}
+                      type="video/mp4"
                       preload="metadata"
                       playsInline
                       muted
-                      crossOrigin="anonymous"
-                      onError={() => {}}
-                    />
+                      // ⬇ iOS에선 controls+수동재생, 그 외 자동재생 허용
+                    {...(isIOS
+                    ? { controls: true, autoPlay: false, loop: false }
+                    : { autoPlay: true, loop: true })}
+                    // ⬇ iOS가 첫 프레임을 안 그리는 경우 강제로 그리기
+                    onLoadedMetadata={(e) => {
+                    if (isIOS) {
+                    try { e.currentTarget.currentTime = 0.001; } catch {}
+                        }
+                        }}
+                        />
                   ) : (
                     <img
                       key={`${previewSrc}-i`}
@@ -298,9 +311,16 @@ const NewPost = () => {
                     preload="metadata"
                     playsInline
                     muted
-                    crossOrigin="anonymous"
-                    onError={() => {}}
-                  />
+    {...(isIOS
+      ? { controls: true, autoPlay: false, loop: false }
+      : { autoPlay: true, loop: true })}
+    // ⬇ iOS가 첫 프레임을 안 그리는 경우 강제로 그리기
+    onLoadedMetadata={(e) => {
+      if (isIOS) {
+        try { e.currentTarget.currentTime = 0.001; } catch {}
+      }
+    }}
+  />
                 ) : (
                   <img src={src} alt="mosaic-preview" style={thumbStyle} />
                 )}
