@@ -19,8 +19,23 @@ app.set("trust proxy", 1);
 // ─────────────────────────────────────────────
 // 보안/로깅/파서
 // ─────────────────────────────────────────────
-app.use(helmet({ crossOriginEmbedderPolicy: false }));
-app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // 비디오 크로스오리진 허용
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "default-src": ["'self'"],
+        "img-src": ["'self'", "data:", "https://kr.object.ncloudstorage.com", "https://kr.object.ncloudstorage.com/eek-eek",],
+        "media-src": ["'self'", "blob:", "https://kr.object.ncloudstorage.com", "https://kr.object.ncloudstorage.com/eek-eek",],
+        "connect-src": ["'self'", "https:", "ws:"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "font-src": ["'self'", "https://cdn.jsdelivr.net"],
+        "script-src": ["'self'"],
+      },
+    },
+  })
+);
 // app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
