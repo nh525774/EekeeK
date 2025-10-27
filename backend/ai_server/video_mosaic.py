@@ -253,15 +253,13 @@ def mosaic_video(video_path, selected_keys, fixed_boxes, output_path, block_size
 
 def ensure_h264(src_mp4: str) -> str:
     dst_mp4 = src_mp4.replace(".mp4", "_h264.mp4")
-    cmd = ["ffmpeg","-y","-i",src_mp4,"-movflags","+faststart",# ✅ 비디오: H.264 baseline/level3.0 + yuv420p (iOS 호환)
-        "-c:v","libx264","-profile:v","baseline","-level","3.0",
-        "-pix_fmt","yuv420p","-preset","veryfast","-crf","23",
-        "-vf","scale=trunc(iw/2)*2:trunc(ih/2)*2",
-        # ✅ 오디오: AAC (무음이어도 괜찮지만 트랙이 있으면 더 호환적)
-        "-c:a","aac","-b:a","128k","-ac","2",dst_mp4]
-    try:
-        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        os.replace(dst_mp4, src_mp4)
+    cmd = [
+        "ffmpeg", "-y", "-i", src_mp4,
+        "-movflags", "+faststart",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k",
+        dst_mp4
+    ]
     except Exception as e:
         print(json.dumps({"warn": f"ffmpeg convert failed: {e}"}))
     return src_mp4

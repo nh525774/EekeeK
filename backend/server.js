@@ -78,7 +78,23 @@ try {
 
 app.use(
   "/uploads",
-  express.static("/app/uploads", { fallthrough: true, etag: false, maxAge: "1m" })
+  express.static("/app/uploads", {
+    fallthrough: true,
+    etag: false,
+    maxAge: "1m",
+    setHeaders: (res, filePath) => {
+      // mp4는 확실히 video/mp4로 지정
+      if (filePath.endsWith(".mp4")) {
+        res.setHeader("Content-Type", "video/mp4");
+        // iOS Safari에서 MIME sniff 막는 nosniff 제거
+        res.removeHeader?.("X-Content-Type-Options");
+      }
+      // Range 요청 허용 (비디오 시킹용)
+      res.setHeader("Accept-Ranges", "bytes");
+      // 캐시도 짧게
+      res.setHeader("Cache-Control", "public, max-age=60");
+    },
+  })
 );
 
 // API 라우트들
