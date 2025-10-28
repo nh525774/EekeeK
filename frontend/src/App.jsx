@@ -12,6 +12,7 @@ import EditMosaic from "./pages/editMosaic";
 import PostDetails from "./pages/postDetails";
 import SearchPage from "./pages/SearchPage";
 import EekrewList from "./pages/EekrewList";
+import DeepfakeFilter from "./pages/DeepfakeFilter";
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
                 <Route path="/postDetail" element={<PostDetails />} />
                 <Route path="/postDetails" element={<PostDetails />} />
                 <Route path="/eekrew" element={<EekrewList />} />
+                <Route path="/deepfake-filter" element={<DeepfakeFilter />} />
               </Routes>
             </div>
           </main>
