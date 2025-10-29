@@ -65,6 +65,7 @@ module.exports = async function loginRisk(req, res, next) {
       userId,
       ipLoc: effectiveLoc, // 내부에서 ll 사용
       deviceHash,
+      source: hasGps ? 'gps' : 'geoip',
     });
 
     // 5) 결과를 요청 컨텍스트에 부착
