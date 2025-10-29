@@ -5,11 +5,13 @@ import Header from "../components/Header";
 import Button from "../components/Button";
 import Icon from "../assets/icons"; // ✅ assets의 Image 아이콘
 import { theme } from "../constants/theme";
+import { uploadAndFilterImage } from "../api/deepfake";
 
 const DeepfakeFilter = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [hovered, setHovered] = useState(false); // 업로드 박스 hover
+  const [resultUrl, setResultUrl] = useState(null);
 
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0] ?? null);
@@ -22,10 +24,43 @@ const DeepfakeFilter = () => {
     }
     try {
       setAnalyzing(true);
-      // TODO: FastAPI 연동 자리
-      alert("AI 서버 연결 준비 중입니다. (추후 FastAPI 연동 예정)");
+      const { imageUrl } = await uploadAndFilterImage(selectedFile);
+      setResultUrl(imageUrl);
+    } catch (err) {
+      console.error(err);
+      alert("필터 적용 중 오류가 발생했습니다.");
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  // ───────── 저장(다운로드) 기능 ─────────
+  const filenameFrom = (url) => {
+    try {
+      const name = url.split("?")[0].split("/").pop();
+      return name || "filtered_image.jpg";
+    } catch {
+      return "filtered_image.jpg";
+    }
+  };
+
+  // 교차 출처 URL이어도 fetch→blob으로 강제 다운로드 가능
+  const downloadResult = async () => {
+    if (!resultUrl) return;
+    try {
+      const res = await fetch(resultUrl, { mode: "cors" });
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filenameFrom(resultUrl);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      // 일부 브라우저/스토리지 CORS가 막힐 수 있으니 새 탭 열기 fallback
+      window.open(resultUrl, "_blank", "noopener");
     }
   };
 
@@ -97,18 +132,23 @@ const DeepfakeFilter = () => {
     objectFit: "contain",
     borderRadius: 12,
   };
+  // 결과 카드 (버튼 아래로 이동)
+  const resultCard = {
+    marginTop: 18,
+    border: "1px solid rgba(0,0,0,0.06)",
+    borderRadius: 16,
+    padding: 14,
+    background: "white",
+    boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+    textAlign: "center",
+  };
 
-  return (
+   return (
     <ScreenWrapper bg="white">
-      <Header title="Deepfake Filter" showBack />
+      <Header title="Deepfake Prevention Filter" showBack />
 
       <div style={pageWrap}>
-        {/* h1/h2는 비워두길 원했으니 유지 (시멘틱 유지용) */}
-
-        {/* 리드 문구 & 서브 안내 */}
-        <p style={leadText}>
-          얼굴이 나온 이미지를 업로드하면 딥페이크 방지 필터를 적용합니다.
-        </p>
+        <p style={leadText}>얼굴이 나온 이미지를 업로드하면 딥페이크 방지 필터를 적용합니다.</p>
         <p style={subNotice}>한 명만 나온 사진을 사용해주세요</p>
 
         {/* 업로드 박스 */}
@@ -134,17 +174,10 @@ const DeepfakeFilter = () => {
                 <p style={{ fontSize: 13 }}>{selectedFile.name}</p>
               </div>
             ) : (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                 <Icon name="Image" size={40} color="#9CA3AF" />
                 <p style={helper}>클릭하여 이미지를 업로드하세요</p>
-                <p style={helperMuted}>JPG, PNG, GIF 등 지원</p>
+                <p style={helperMuted}>JPG, PNG 지원</p>
               </div>
             )}
 
@@ -158,14 +191,14 @@ const DeepfakeFilter = () => {
           </label>
         </div>
 
-        {/* 준비 중 안내 + 버튼 */}
+        {/* 버튼만 남기고 결과는 아래 카드에 따로 렌더 */}
         <div style={pendingBox}>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <Button
               title={
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <Icon name="Image" size={18} color="white" />
-                  <span>EekshielD</span>
+                  <span>EekshielD 필터 적용</span>
                 </div>
               }
               onPress={handleAnalyzeClick}
@@ -180,6 +213,43 @@ const DeepfakeFilter = () => {
               disabled={!selectedFile || analyzing}
             />
           </div>
+
+          {/* ✅ 결과는 버튼 아래 카드로 */}
+          {resultUrl && (
+            <div style={resultCard}>
+              <img
+                src={resultUrl}
+                alt="필터 적용 결과"
+                style={{
+                  maxWidth: 520,
+                  width: "100%",
+                  borderRadius: 12,
+                  display: "block",
+                  margin: "0 auto",
+                }}
+              />
+              <p style={{ fontSize: 13, color: "#6B7280", marginTop: 8 }}>
+                필터 적용 결과
+              </p>
+
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 10 }}>
+                <Button
+                  title="이미지 저장"
+                  onPress={downloadResult}
+                  style={{
+                    backgroundColor: theme.colors.primary,
+                    color: "#fff",
+                    borderRadius: 10,
+                    padding: "8px 14px",
+                  }}
+                />
+              </div>
+
+              <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 6 }}>
+                모바일은 이미지 길게 눌러 저장할 수도 있어요.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </ScreenWrapper>

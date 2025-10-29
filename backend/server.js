@@ -124,6 +124,7 @@ app.use("/api", require("./routes/protectRoutes"));
 app.use("/api/places", require("./routes/placeRoutes"));
 app.use("/api/pii", require("./routes/piiRoutes"));
 app.use("/api/eekrew", require("./routes/eekrewRoutes")); // 이크루 라우트
+app.use("/api/deepfake", require("./routes/deepfakeRoutes"));
 
 //  userController 직접 연결은 /api/users/* 로만 (중복 방지)
 try {

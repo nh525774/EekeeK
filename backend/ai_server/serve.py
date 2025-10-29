@@ -1,11 +1,15 @@
 # backend/ai_server/serve.py
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, HttpUrl
+from typing import List, Literal, Optional, Dict, Any
 import os, sys, json, tempfile, subprocess, shlex
+import base64
+
+from deepfake_filter.model import apply_delta_base64
 
 app = FastAPI(title="EekeeK AI Server", version="1.0.0")
+
 
 # ─────────────────────────────────────────────────────────
 # 경로/실행 환경
@@ -21,7 +25,7 @@ if os.path.isdir(pii_dir) and pii_dir not in sys.path:
     sys.path.insert(0, pii_dir)
 
 # ─────────────────────────────────────────────────────────
-# NER 모듈 (네가 올려준 warn_base 이용)
+# NER 모듈 (warn_base 이용)
 # ─────────────────────────────────────────────────────────
 try:
     from pii_scan_warn_base import scan_text_warn_only_base  # ai_server/pii/pii_scan_warn_base.py
@@ -218,6 +222,17 @@ def protect_pii_text(body: PiiTextIn):
 @app.post("/scan-text")
 def scan_text_alias(body: PiiTextIn):
     return protect_pii_text(body)
+
+# --- 헬스체크 아래 등 적당한 위치에 엔드포인트 정의 ---
+class ApplyIn(BaseModel):
+    sourceUrl: HttpUrl
+    mode: Literal["bytes","url"] = "bytes"
+
+@app.post("/deepfake/apply")
+def apply(payload: ApplyIn):
+    mime, data = apply_delta_base64(str(payload.sourceUrl))
+    return {"mime": mime, "dataBase64": base64.b64encode(data).decode("utf-8")}
+
 
 @app.get("/health")
 def health():
