@@ -198,7 +198,7 @@ async def protect_video_mosaic(
 
 # ─────────────────────────────────────────────────────────
 # 5) /protect-pii-text : 텍스트 NER 기반 PII 탐지 (네 모듈 호출)
-#    반환: { ok, hits:[{start,end,type,...}], message(마스킹된 텍스트), error }
+#    반환: { ok, hits:[{start,end,type,a...}], message(마스킹된 텍스트), error }
 # ─────────────────────────────────────────────────────────
 class PiiTextIn(BaseModel):
     text: str
