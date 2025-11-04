@@ -79,24 +79,105 @@ def is_searchable_in_map(text):
 
 def detect_phones_emails(fields):
     phone_pattern = re.compile(r'\b\d{2,4}(?:[-.\s]?\d{3,4}){1,2}\b')
-    email_pattern = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
+    email_pattern = re.compile(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}')
+
+    # 1) 토큰 전처리: 중심 y, 높이 계산
+    tokens = []
+    for f in fields:
+        txt = f.get("inferText", "") or ""
+        verts = f.get("boundingPoly", {}).get("vertices", [])
+        if len(verts) != 4: 
+            continue
+        xs = [v["x"] for v in verts]
+        ys = [v["y"] for v in verts]
+        x1, y1, x2, y2 = min(xs), min(ys), max(xs), max(ys)
+        cy = (y1 + y2) / 2.0
+        h = max(1, y2 - y1)
+        tokens.append({
+            "text": txt, "verts": verts,
+            "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+            "cy": cy, "h": h,
+        })
+    if not tokens:
+        return [], []
+
+    # 2) y 중심값으로 정렬 후 "라인"으로 그룹핑
+    tokens.sort(key=lambda t: (t["cy"], t["x1"]))
+    lines = []
+    for t in tokens:
+        placed = False
+        for line in lines:
+            # 라인 대표 y와 현재 토큰의 cy가 충분히 가까우면 같은 줄로 본다
+            rep_cy, rep_h = line["rep_cy"], line["rep_h"]
+            if abs(t["cy"] - rep_cy) <= max(rep_h, t["h"]) * 0.6:
+                line["tokens"].append(t)
+                # 대표치 업데이트(가볍게 이동평균)
+                line["rep_cy"] = (line["rep_cy"]*len(line["tokens"]) + t["cy"]) / (len(line["tokens"])+1)
+                line["rep_h"] = max(line["rep_h"], t["h"])
+                placed = True
+                break
+        if not placed:
+            lines.append({"tokens":[t], "rep_cy": t["cy"], "rep_h": t["h"]})
 
     phone_boxes = []
     email_boxes = []
 
-    for i, field in enumerate(fields):
-        text = field['inferText']
-        if phone_pattern.search(text):
-            phone_boxes.append(field['boundingPoly']['vertices'])
+    # 3) 각 라인 내에서만 윈도우를 굴려서 이메일/전화번호 탐지
+    for line in lines:
+        line_tokens = sorted(line["tokens"], key=lambda t: t["x1"])
+        n = len(line_tokens)
 
-    for i in range(len(fields)):
-        for win in range(2, 6):
-            if i + win > len(fields): continue
-            chunk = ''.join(f['inferText'] for f in fields[i:i+win])
-            if email_pattern.fullmatch(chunk):
-                email_boxes.append(fields[i]['boundingPoly']['vertices'])
+        # -- 전화번호: 토큰 단위 탐지 + 인접 토큰 병합(010- / 1234 / -5678 같은 경우)
+        i = 0
+        while i < n:
+            t = line_tokens[i]
+            if phone_pattern.search(t["text"]):
+                # 양 옆 토큰을 붙여 보며 더 긴 패턴이 되는지 시도
+                x1, y1, x2, y2 = t["x1"], t["y1"], t["x2"], t["y2"]
+                j = i + 1
+                chunk = t["text"]
+                while j < n:
+                    cand = chunk + line_tokens[j]["text"]
+                    if phone_pattern.search(cand):
+                        # 박스 확장
+                        x1 = min(x1, line_tokens[j]["x1"])
+                        y1 = min(y1, line_tokens[j]["y1"])
+                        x2 = max(x2, line_tokens[j]["x2"])
+                        y2 = max(y2, line_tokens[j]["y2"])
+                        chunk = cand
+                        j += 1
+                    else:
+                        break
+                phone_boxes.append([
+                    {"x": int(x1), "y": int(y1)},
+                    {"x": int(x2), "y": int(y1)},
+                    {"x": int(x2), "y": int(y2)},
+                    {"x": int(x1), "y": int(y2)},
+                ])
+                i = j
+            else:
+                i += 1
+
+        # -- 이메일: 같은 라인에서만 1~8 토큰 붙여 fullmatch
+        for s in range(n):
+            for e in range(s+1, min(s+8, n)+1):
+                chunk = ''.join(tk["text"] for tk in line_tokens[s:e])
+                if email_pattern.fullmatch(chunk):
+                    xs, ys = [], []
+                    for tk in line_tokens[s:e]:
+                        xs += [tk["x1"], tk["x2"]] if False else [tk["x1"], tk["x2"]]
+                        ys += [tk["y1"], tk["y2"]]
+                    box = [
+                        {"x": int(min(xs)), "y": int(min(ys))},
+                        {"x": int(max(xs)), "y": int(min(ys))},
+                        {"x": int(max(xs)), "y": int(max(ys))},
+                        {"x": int(min(xs)), "y": int(max(ys))},
+                    ]
+                    email_boxes.append(box)
+                    break  # 해당 시작점 s에서는 첫 매치만 사용
 
     return phone_boxes, email_boxes
+
 
 def is_address(text):
     if len(text.strip()) < 3: return False

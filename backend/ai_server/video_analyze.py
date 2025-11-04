@@ -114,6 +114,7 @@ def analyze_first_frame(video_path):
     out = {
         "faces": [normalize_box(extract_box(f)) for f in (result.get("faces") or [])],
         "phones": [normalize_box(extract_box(p)) for p in (result.get("phones") or [])],
+        "emails": [normalize_box(extract_box(e)) for e in (result.get("emails") or [])],
         "addresses": [normalize_box(extract_box(a)) for a in (result.get("addresses") or [])],
         "location_sensitive": [normalize_box(extract_box(l)) for l in (result.get("location_sensitive") or [])],
         "license_plates": [normalize_box(extract_box(lp)) for lp in (result.get("license_plates") or [])],

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import axios from "axios";
 import ScreenWrapper from "../components/ScreenWrapper";
 import { theme } from "../constants/theme";
@@ -60,7 +60,7 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
         return;
       }
       setVisible(!data.closed);
-    } catch (e) {}
+    } catch {}
   }, [key, level]);
 
   const handleClose = () => {
@@ -71,7 +71,7 @@ function RiskPersistentBanner({ risk, isNewDevice, userId }) {
         key,
         JSON.stringify({ closed: true, at: Date.now(), level })
       );
-    } catch (e) {}
+    } catch {}
   };
 
   if (!visible) return null;
@@ -136,6 +136,7 @@ const Home = () => {
   const [posts, setPosts] = useState([]);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const ranRef = useRef(false);
 
   // 내 프로필(이미지/이름)
   const [me, setMe] = useState(null);
@@ -154,7 +155,9 @@ const Home = () => {
       setMe({
         id: data?._id,
         name: data?.username || "",
-        image: data?.profileImageUrl || "",
+        image: data?.profileImageUrl
+          ? getUserImageSrc(data.profileImageUrl)
+          : "/defaultUser.png",
       });
     } catch (e) {
       console.error("fetch /api/users/me 실패:", e);
@@ -204,15 +207,22 @@ const Home = () => {
     limit = next;
   };
 
-  const headerName = me?.name || authUser?.username || authUser?.name || "User";
-  const avatarUrl = getUserImageSrc(
-    me?.image ||
-      authUser?.profileImageUrl ||
-      authUser?.image ||
-      "/defaultUser.png"
-  );
+  const headerName =
+    me?.name || authUser?.username || authUser?.name || "User";
 
-  const ranRef = useRef(false);
+  const avatarUrl = useMemo(() => {
+  const raw =
+    me?.image ||
+    authUser?.profileImageUrl ||
+    authUser?.image ||
+    "/defaultUser.png";
+
+  if (!raw) return "/defaultUser.png";
+
+  return raw.startsWith("http") || raw.startsWith("blob:")
+    ? raw
+    : getUserImageSrc(raw);
+}, [me?.image, authUser?.profileImageUrl, authUser?.image]);
 
   useEffect(() => {
     const user = auth.currentUser;

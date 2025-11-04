@@ -172,6 +172,7 @@ const EditMosaic = () => {
             ? {
                 faces: wrapBoxes(data.faces),
                 phones: wrapBoxes(data.phones),
+                emails: wrapBoxes(data.emails), 
                 addresses: wrapBoxes(data.addresses),
                 location_sensitive: wrapBoxes(data.location_sensitive),
                 license_plates: wrapBoxes(data.license_plates),
@@ -179,12 +180,19 @@ const EditMosaic = () => {
             : {
                 faces: (data.results?.[0]?.faces || []).map((f) => ({ box: xyxyToXywh(f.box) })),
                 phones: wrapBoxes(data.results?.[0]?.phones),
+                emails: wrapBoxes(data.results?.[0]?.emails), 
                 addresses: wrapBoxes(data.results?.[0]?.addresses),
                 location_sensitive: wrapBoxes(data.results?.[0]?.location_sensitive),
                 license_plates: wrapBoxes(data.results?.[0]?.license_plates),
               };
-
-        setAnalysis(parsed);
+              const merged = {
+                ...parsed,
+                phones_emails: [
+              ...(parsed.phones || []),
+              ...(parsed.emails || []),
+              ],
+              };
+              setAnalysis(merged);
         if (!imageUrl && data.thumb_url) {
           const abs = assetUrl(data.thumb_url);
           setImageUrl(abs);
@@ -233,7 +241,11 @@ const EditMosaic = () => {
       }
 
       // 서버 호환성 위해 모두 전송: (키/박스/블록크기)
-      formData.append("selected", JSON.stringify([selectedType])); // ex) ["faces"]
+      let selectedArr = [selectedType];
+      if (selectedType === "phones_emails") {
+      selectedArr = ["phones", "emails"]; // 백엔드 detect_keys 맞춤
+      }
+      formData.append("selected", JSON.stringify(selectedArr));
       formData.append("selectedBoxes", JSON.stringify(valid));     // [x1,y1,x2,y2] 배열들
       formData.append("block_size", String(blockSize));            // 슬라이더 값
 
@@ -374,7 +386,7 @@ const EditMosaic = () => {
             paddingTop: 8,
           }}
         >
-          {["faces", "phones", "addresses", "location_sensitive", "license_plates"].map((type) => {
+          {["faces", "phones_emails", "addresses", "location_sensitive", "license_plates"].map((type) => {
             const active = selectedType === type;
             const baseShadow = active
               ? "0 6px 14px rgba(0,0,0,0.12)"
@@ -416,7 +428,7 @@ const EditMosaic = () => {
                 }}
               >
                 {type === "faces" && "얼굴"}
-                {type === "phones" && "전화번호"}
+                {type === "phones_emails" && "전화번호 / 이메일"}
                 {type === "addresses" && "주소"}
                 {type === "location_sensitive" && "위치"}
                 {type === "license_plates" && "차량 번호판"}

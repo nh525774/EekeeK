@@ -11,10 +11,11 @@ except Exception:
     pass
 
 # ── (유틸 함수들: 네 기존 내용 그대로 사용) ─────────────────────────────
-ALL_KEYS = ["faces", "phones", "addresses", "location_sensitive", "license_plates"]
+ALL_KEYS = ["faces", "phones", "emails", "addresses", "location_sensitive", "license_plates"]
 KEY_ALIASES = {
     "face":"faces","faces":"faces","얼굴":"faces",
     "phone":"phones","phones":"phones","전화":"phones","전화번호":"phones",
+    "email":"emails","emails":"emails","이메일":"emails",
     "address":"addresses","addresses":"addresses","주소":"addresses",
     "location":"location_sensitive","location_sensitive":"location_sensitive","위치":"location_sensitive",
     "plate":"license_plates","license_plate":"license_plates","license_plates":"license_plates","번호판":"license_plates",
@@ -223,6 +224,7 @@ def mosaic_video(video_path, selected_keys, fixed_boxes, output_path, block_size
 
                 if "faces" in selected_keys: boxes += [_sb(f) for f in (result.get("faces") or [])]
                 if "phones" in selected_keys: boxes += [_sb(p) for p in (result.get("phones") or [])]
+                if "emails" in selected_keys: boxes += [_sb(e) for e in (result.get("emails") or [])]
                 if "addresses" in selected_keys: boxes += [_sb(a) for a in (result.get("addresses") or [])]
                 if "location_sensitive" in selected_keys: boxes += [_sb(l) for l in (result.get("location_sensitive") or [])]
                 if "license_plates" in selected_keys: boxes += [_sb(lp) for lp in (result.get("license_plates") or [])]
