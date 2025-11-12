@@ -233,6 +233,21 @@ def apply(payload: ApplyIn):
     mime, data = apply_delta_base64(str(payload.sourceUrl))
     return {"mime": mime, "dataBase64": base64.b64encode(data).decode("utf-8")}
 
+import time
+
+@app.get("/bench")
+def bench():
+    """서버 내부에서 실제 detect_entry.py 한 번 실행해서 시간 측정"""
+    sample_path = os.path.join(BASE_DIR, "bench_sample.jpg")  # 테스트용 샘플
+    if not os.path.exists(sample_path):
+        return {"error": "bench_sample.jpg not found"}
+    start = time.time()
+    try:
+        out = _run_py("detect_entry.py", [sample_path])
+    except Exception as e:
+        return {"error": str(e)}
+    elapsed = round((time.time() - start), 3)
+    return {"elapsed_sec": elapsed, "result": out}
 
 @app.get("/health")
 def health():
