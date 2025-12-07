@@ -15,8 +15,6 @@ from facenet_pytorch import MTCNN
 from dotenv import load_dotenv
 from pathlib import Path
 
-
-# ✅ 로그 제거용 context manager
 @contextlib.contextmanager
 def suppress_output():
     with open(os.devnull, 'w') as devnull:
@@ -170,7 +168,7 @@ def detect_phones_emails(fields):
                         {"x": int(min(xs)), "y": int(max(ys))},
                     ]
                     email_boxes.append(box)
-                    break  # 해당 시작점 s에서는 첫 매치만 사용
+                    break  
 
     return phone_boxes, email_boxes
 

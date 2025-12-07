@@ -5,7 +5,7 @@ from transformers import AutoTokenizer, AutoModelForTokenClassification, pipelin
 
 # ---- 로컬 모델 디렉터리(절대경로) 확정 ----
 MODEL_DIR = (Path(__file__).resolve().parent / "ner_model").as_posix()
-USE_GPU = False  # GPU 안 쓰면 False
+USE_GPU = False 
 
 _tokenizer = None
 _model = None

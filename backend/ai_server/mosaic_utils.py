@@ -5,7 +5,6 @@ def apply_mosaic(image_path, boxes, save_path, block_size=None):
     boxes: [[x1,y1,x2,y2], ...] (xyxy)
     block_size: 모자이크 강도에 쓰는 정수값 (클수록 약해짐 — 예전 방식)
     """
-    # (예전 스타일대로 간단히) EXIF만 반영하고 RGB로 변환
     img = ImageOps.exif_transpose(Image.open(image_path)).convert("RGB")
     W, H = img.size
 
@@ -22,7 +21,6 @@ def apply_mosaic(image_path, boxes, save_path, block_size=None):
     for b in boxes:
         x1, y1, x2, y2 = clamp_xyxy(*b)
         region = img.crop((x1, y1, x2, y2))
-        # 예전 방식: 정사각형으로 줄였다가 최근접 확대
         small = region.resize((bs, bs), resample=Image.BILINEAR)
         mosaic = small.resize(region.size, Image.NEAREST)
         img.paste(mosaic, (x1, y1, x2, y2))

@@ -145,7 +145,6 @@ async def protect_mosaic(
             outs.append(out)  # { out_path: "..."} or { out_paths: [...] }
         return {"results": outs}
     finally:
-        # 입력 임시파일만 정리 (출력은 mosaic_entry.py가 별도 경로에 저장)
         for p in temps:
             try: os.remove(p)
             except: pass
@@ -223,7 +222,6 @@ def protect_pii_text(body: PiiTextIn):
 def scan_text_alias(body: PiiTextIn):
     return protect_pii_text(body)
 
-# --- 헬스체크 아래 등 적당한 위치에 엔드포인트 정의 ---
 class ApplyIn(BaseModel):
     sourceUrl: HttpUrl
     mode: Literal["bytes","url"] = "bytes"
@@ -237,7 +235,6 @@ import time
 
 @app.get("/bench")
 def bench():
-    """서버 내부에서 실제 detect_entry.py 한 번 실행해서 시간 측정"""
     sample_path = os.path.join(BASE_DIR, "bench_sample.jpg")  # 테스트용 샘플
     if not os.path.exists(sample_path):
         return {"error": "bench_sample.jpg not found"}

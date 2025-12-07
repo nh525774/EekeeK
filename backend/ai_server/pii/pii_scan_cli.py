@@ -7,11 +7,10 @@ from pii_scan_warn_base import scan_text_warn_only_base
 
 def main():
     try:
-        # stdin 으로 텍스트를 받거나, argv로 받도록
         if not sys.stdin.isatty():
             text = sys.stdin.read()
         else:
-            text = " ".join(sys.argv[1:])  # 간단 대체
+            text = " ".join(sys.argv[1:]) 
         res = scan_text_warn_only_base(text or "")
         sys.stdout.write(json.dumps(res, ensure_ascii=False))
     except Exception as e:

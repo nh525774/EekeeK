@@ -5,7 +5,7 @@ from detect_utils import detect_personal_info
 
 def main():
     image_paths = []
-    keys_arg = ""  # "license_plates,faces" 같은 콤마 문자열
+    keys_arg = "" 
 
     # 인자 파싱: 파일 경로 + --keys=...
     for a in sys.argv[1:]:
@@ -23,11 +23,9 @@ def main():
             results[path] = {"error": "file not found"}
             continue
         try:
-            # detect_personal_info가 keys를 지원하지 않아도 안전하게 호출
             try:
                 results[path] = detect_personal_info(path, keys=keys)
             except TypeError:
-                # 구버전 시그니처 대응
                 results[path] = detect_personal_info(path)
         except Exception as e:
             results[path] = {"error": str(e)}
